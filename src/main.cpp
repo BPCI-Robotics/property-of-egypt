@@ -1,26 +1,30 @@
 #include "main.h"
-#include "vision.hpp"
-
 
 using namespace pros;
 
 Controller controller (pros::E_CONTROLLER_MASTER);
 
+MotorGroup left_motors ({1, 2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
+MotorGroup right_motors ({-4,-5, 6}, v5::MotorGears::blue, v5::MotorUnits::counts);
+
 Motor lift_intake (-7, v5::MotorGears::blue, v5::MotorUnits::counts);
 Motor wall_stake (8, v5::MotorGears::red, v5::MotorUnits::degrees); 
 
-MotorGroup left_motors ({1, 2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
-MotorGroup right_motors ({-4,-5, 6}, v5::MotorGears::blue, v5::MotorUnits::counts);
+Vision vision_sensor (9, E_VISION_ZERO_CENTER);
 
 adi::Pneumatics stake_piston ({1, 'a'}, false, false);
 adi::Pneumatics doink_piston ({2, 'b'}, false, false);
 
 adi::Button donut_switch (4);
 
-Vision vision_sensor (1, E_VISION_ZERO_CENTER);
-
 const int BLUE_SIG_ID = 1;
 const int RED_SIG_ID = 2;
+
+int MY_SIG_ID = 1;
+int ENEMY_SIG_ID = 2;
+
+#define LEFT 0
+#define RIGHT 1
 
 void initialize() {
 	pros::lcd::initialize();
@@ -28,8 +32,8 @@ void initialize() {
 	static vision_signature_s_t blue_sig = vision_sensor.signature_from_utility(BLUE_SIG_ID, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0);
 	static vision_signature_s_t red_sig =  vision_sensor.signature_from_utility(RED_SIG_ID,  7935, 9719, 8827,-1261, -289, -775, 2.5, 0);
 
-	vision_sensor.set_signature(1, &blue_sig);
-	vision_sensor.set_signature(2, &red_sig);
+	vision_sensor.set_signature(BLUE_SIG_ID, &blue_sig);
+	vision_sensor.set_signature(RED_SIG_ID, &red_sig);
 
 	vision_sensor.clear_led();
 }
@@ -84,7 +88,7 @@ void elevator_loop() {
         lift_intake_running = false;
     }	
 
-    while (lift_intake_is_running) {
+    while (lift_intake_running) {
         vision_object enemy_donut = vision_sensor.get_by_sig(0,1);
 
         if (enemy_donut.height >= 30 && enemy_donut.width >= 70) {
@@ -96,7 +100,7 @@ void elevator_loop() {
                     lift_intake.brake();
                     delay(250);
 
-                    lift_intake.move_velocity(600 * (save_direction == FORWARD ? 1 : -1))
+                    lift_intake.move_velocity(600 * (save_direction == FORWARD ? 1 : -1));
                 }
             }
         }
