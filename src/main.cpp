@@ -2,8 +2,8 @@
 
 Controller controller (pros::E_CONTROLLER_MASTER);
 
-MotorGroup left_motors ({1, 2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
-MotorGroup right_motors ({-4,-5, 6}, v5::MotorGears::blue, v5::MotorUnits::counts);
+MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorUnits::counts);
+MotorGroup right_motors ({-4,5, -6}, v5::MotorGears::blue, v5::MotorUnits::counts);
 
 Motor lift_intake (-7, v5::MotorGears::blue, v5::MotorUnits::counts);
 Motor wall_stake (8, v5::MotorGears::red, v5::MotorUnits::degrees); 
@@ -13,7 +13,7 @@ Vision vision_sensor (9, E_VISION_ZERO_CENTER);
 adi::Pneumatics stake_piston ({1, 'a'}, false, false);
 adi::Pneumatics doink_piston ({2, 'b'}, false, false);
 
-adi::Button donut_switch (4);
+adi::Button donut_presence_sensor (4);
 
 const int BLUE_SIG_ID = 1;
 const int RED_SIG_ID = 2;
@@ -90,10 +90,10 @@ void elevator_loop() {
         vision_object enemy_donut = vision_sensor.get_by_sig(0,1);
 
         if (enemy_donut.height >= 30 && enemy_donut.width >= 70) {
-            while (!donut_switch.get_new_press()) {
+            while (!donut_presence_sensor.get_new_press()) {
                 int save_direction = lift_intake.get_direction();
                 delay(20);
-                if (donut_switch.get_new_press()) {
+                if (donut_presence_sensor.get_new_press()) {
                     delay(100);
                     lift_intake.brake();
                     delay(250);
