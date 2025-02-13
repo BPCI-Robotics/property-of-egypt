@@ -1,7 +1,5 @@
 #include "main.h"
 
-using namespace pros;
-
 Controller controller (pros::E_CONTROLLER_MASTER);
 
 MotorGroup left_motors ({1, 2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
