@@ -34,6 +34,15 @@ void initialize() {
 	vision_sensor.set_signature(RED_SIG_ID, &red_sig);
 
 	vision_sensor.clear_led();
+
+    ez::as::auton_selector.autons_add({
+        {"Red\n\nLeft", auton_red_left},
+        {"Red\n\nRight", auton_red_right},
+        {"Blue\n\nLeft", auton_blue_left},
+        {"Blue\n\nRight", auton_blue_right},
+        {"Skills Auton\n\nPlace on the left", auton_skills}
+    });
+    
 }
 
 void disabled() {}
