@@ -51,58 +51,53 @@ void autonomous() {
 
 void opcontrol() {
 
+    static bool lift_intake_running;
+
 	while (true) {
         
         /* move_absolute is non-blocking. This is the intended behavior, and the controls should not be locked. */
 
         /* Initial position of the donut */
-        if (controller.get_digital_new_press(DIGITAL_Y)){
+        if (controller.get_digital_new_press(DIGITAL_Y))
             wall_stake.move_absolute(0, 70);
-        }
 
-        /* Pick up the donut and hold it*/
-        if (controller.get_digital_new_press(DIGITAL_X)) {
+        /* Pick up the donut and hold it */
+        if (controller.get_digital_new_press(DIGITAL_X)) 
             wall_stake.move_absolute(40, 70);
-        }
 
         /* Score the donut */
-        if (controller.get_digital_new_press(DIGITAL_A)) {
+        if (controller.get_digital_new_press(DIGITAL_A))
             wall_stake.move_absolute(100, 70);
-        }
+        
+        /* Toggle the doinker */
+        if (controller.get_digital_new_press(DIGITAL_R1))
+            doink_piston.toggle();
 
-		int forwardpower = controller.get_analog(ANALOG_LEFT_Y);
-    	int turnpower = controller.get_analog(ANALOG_RIGHT_X);
+        /* Toggle the stake grabber */
+        if (controller.get_digital_new_press(DIGITAL_R2))
+            stake_piston.toggle();
+        
+
+        lift_intake_running = false;
+
+        if (controller.get_digital(E_CONTROLLER_DIGITAL_L2)) {
+            lift_intake.move_velocity(600);
+            lift_intake_running = true;
+        }
+        else if (controller.get_digital(E_CONTROLLER_DIGITAL_L1)) {
+            lift_intake.move_velocity(-600);
+            lift_intake_running = true;
+        }
 
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
 
+        /* This is required for the chassis.opcontrol_arcade_standard function to work. */
 		pros::delay(ez::util::DELAY_TIME);
 	}
-
-	// keybinds for toggling pneumatics
-	if (controller.get_digital_new_press(DIGITAL_R2))
-		stake_piston.toggle();
-	
-	if (controller.get_digital_new_press(DIGITAL_R1))
-		doink_piston.toggle();
 }
 
 
-void elevator_loop() {
-    static bool lift_intake_running = false;
-
-    if (controller.get_digital(E_CONTROLLER_DIGITAL_L2)) {
-            lift_intake.move_velocity(600);
-            lift_intake_running = true;
-    }
-    else if (controller.get_digital(E_CONTROLLER_DIGITAL_L1)) {
-            lift_intake.move_velocity(-600);
-            lift_intake_running = true;
-    }
-
-    else {
-        lift_intake_running = false;
-    }	
-
+void elevator_loop(bool lift_intake_running) {
     while (lift_intake_running) {
         vision_object enemy_donut = vision_sensor.get_by_sig(0,1);
 
