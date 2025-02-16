@@ -9,6 +9,9 @@ int ENEMY_SIG_ID = 2;
 #define LEFT 0
 #define RIGHT 1
 
+// Definition is later in file.
+void elevator_loop();
+
 void initialize() {
 	pros::lcd::initialize();
 
@@ -46,12 +49,16 @@ void autonomous() {
     chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
     chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
 
+    /* This is equally applicable to autonomous. */
+    pros::Task loop_task (elevator_loop);
+
     ez::as::auton_selector.selected_auton_call(); 
 }
 
-void opcontrol() {
+bool lift_intake_running;
 
-    static bool lift_intake_running;
+void opcontrol() {
+    pros::Task loop_task (elevator_loop);
 
 	while (true) {
         
@@ -92,27 +99,54 @@ void opcontrol() {
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
 
         /* This is required for the chassis.opcontrol_arcade_standard function to work. */
-		pros::delay(ez::util::DELAY_TIME);
+		delay(ez::util::DELAY_TIME);
 	}
 }
 
 
-void elevator_loop(bool lift_intake_running) {
-    while (lift_intake_running) {
-        vision_object enemy_donut = vision_sensor.get_by_sig(0,1);
+void elevator_loop() {
+    while (true) {
+        pros::delay(20);
 
-        if (enemy_donut.height >= 30 && enemy_donut.width >= 70) {
-            while (!donut_presence_sensor.get_new_press()) {
-                int save_direction = lift_intake.get_direction();
-                delay(20);
-                if (donut_presence_sensor.get_new_press()) {
-                    delay(100);
-                    lift_intake.brake();
-                    delay(250);
+        /* Exit: the lift intake isn't running */
+        if (!lift_intake_running) 
+            continue;
 
-                    lift_intake.move_velocity(600 * (save_direction == FORWARD ? 1 : -1));
-                }
-            }
+        vision_object enemy_donut = vision_sensor.get_by_sig(0, ENEMY_SIG_ID);
+
+        /* Exit: the donut is too far away (so it appears small) */
+        if (enemy_donut.height < 30 || enemy_donut.width < 70)
+            continue;
+
+        /* Hold on, I found something. Let's wait until the switch is hit. */
+        int timer = 0;
+        bool akita_neru = false;
+
+        while (!donut_presence_sensor.get_new_press()) {
+            delay(10);
+            timer += 10;
+
+            /* Break the loop when for some reason the switch doesn't get a donut, or the lift intake is stopped. */
+            /* This may be because the switch literally missed the donut. */
+            akita_neru = (timer > 2000 || !lift_intake_running);
+            if (akita_neru)
+                break;
         }
+
+        /* Exit: the donut did not make it to the top. */
+        if (akita_neru)
+            continue;
+
+
+        /* By now, we know that: the donut elevator is running, the donut has reached the top,
+           and the donut is the enemy's color. This is enough reason to complete the routine. */
+
+        int save_direction = lift_intake.get_direction();
+
+        delay(100);
+        lift_intake.brake();
+        delay(250);
+
+        lift_intake.move_velocity(600 * (save_direction == FORWARD ? 1 : -1));
     }
 }
