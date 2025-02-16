@@ -50,7 +50,7 @@ void autonomous() {
     chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
 
     /* This is equally applicable to autonomous. */
-    pros::Task loop_task (elevator_loop);
+    enable_color_sorting();
 
     ez::as::auton_selector.selected_auton_call(); 
 }
@@ -58,7 +58,7 @@ void autonomous() {
 bool lift_intake_running;
 
 void opcontrol() {
-    pros::Task loop_task (elevator_loop);
+    enable_color_sorting();
 
 	while (true) {
         
@@ -84,17 +84,23 @@ void opcontrol() {
         if (controller.get_digital_new_press(DIGITAL_R2))
             stake_piston.toggle();
         
-
-        lift_intake_running = false;
-
-        if (controller.get_digital(E_CONTROLLER_DIGITAL_L2)) {
+        /* Move the lift intake */
+        if (controller.get_digital(DIGITAL_L2)) {
             lift_intake.move_velocity(600);
             lift_intake_running = true;
         }
-        else if (controller.get_digital(E_CONTROLLER_DIGITAL_L1)) {
+        else if (controller.get_digital(DIGITAL_L1)) {
             lift_intake.move_velocity(-600);
             lift_intake_running = true;
         }
+        else {
+            lift_intake.move_velocity(0);
+            lift_intake_running = false;
+        }
+
+        /* Toggle color sorting */
+        if (controller.get_digital_new_press(DIGITAL_LEFT))
+            toggle_color_sorting();
 
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
 
@@ -103,9 +109,27 @@ void opcontrol() {
 	}
 }
 
+/* None of these functions claim to be thread-safe. There's only one thread which calls them anyway. */
+bool color_sorting_enabled = false;
+
+void enable_color_sorting() {
+    if (color_sorting_enabled)
+        return;
+    
+    color_sorting_enabled = true;
+    pros::Task color_sort_task(elevator_loop);
+}
+
+void toggle_color_sorting() {
+    if (color_sorting_enabled) 
+        color_sorting_enabled = false;
+    else 
+        enable_color_sorting();
+    
+}
 
 void elevator_loop() {
-    while (true) {
+    while (color_sorting_enabled) {
         pros::delay(20);
 
         /* Exit: the lift intake isn't running */
@@ -126,9 +150,10 @@ void elevator_loop() {
             delay(10);
             timer += 10;
 
-            /* Break the loop when for some reason the switch doesn't get a donut, or the lift intake is stopped. */
-            /* This may be because the switch literally missed the donut. */
-            akita_neru = (timer > 2000 || !lift_intake_running);
+            /* 1. Two seconds have passed and the donut did not make it to the top. */
+            /* 2. The lift intake is not spinning anymore. No need to continue waiting. */
+            /* 3. The driver has asked to disable color sorting. No need to continue waiting. */
+            akita_neru = (timer > 2000 || !lift_intake_running || !color_sorting_enabled);
             if (akita_neru)
                 break;
         }
@@ -136,10 +161,6 @@ void elevator_loop() {
         /* Exit: the donut did not make it to the top. */
         if (akita_neru)
             continue;
-
-
-        /* By now, we know that: the donut elevator is running, the donut has reached the top,
-           and the donut is the enemy's color. This is enough reason to complete the routine. */
 
         int save_direction = lift_intake.get_direction();
 
