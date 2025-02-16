@@ -30,24 +30,24 @@ void initialize() {
         {"Skills Auton\n\nPlace on the left", auton_skills}
     });
 
-    left_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	right_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
 	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
 	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
-    
-}
-
-/* Convert percent velocity to RPM (out of 600). */
-/* This is always an integer, because velocity is passed as an integer anyway. */
-constexpr unsigned long long operator"" _percent(unsigned long long vel) {
-    return vel * 6;
 }
 
 void disabled() {}
 
 void competition_initialize() {}
 
-void autonomous() {}
+/* The autonomous code is actually at autons.cpp */
+void autonomous() {
+    chassis.pid_targets_reset();                // Resets PID targets to 0
+    chassis.drive_imu_reset();                  // Reset gyro position to 0
+    chassis.drive_sensor_reset();               // Reset drive sensors to 0
+    chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
+    chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
+
+    ez::as::auton_selector.selected_auton_call(); 
+}
 
 void opcontrol() {
 
@@ -57,7 +57,7 @@ void opcontrol() {
 
         /* Initial position of the donut */
         if (controller.get_digital_new_press(DIGITAL_Y)){
-            wall_stake.move_absolute(0, 70_percent);
+            wall_stake.move_absolute(0, 70);
         }
 
         /* Pick up the donut and hold it*/

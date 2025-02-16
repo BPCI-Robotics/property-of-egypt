@@ -42,26 +42,45 @@ void auton_default_params() {
     chassis.pid_angle_behavior_set(ez::shortest);  // Changes the default behavior for turning, this defaults it to the shortest path there
 }
 
-void auton_skills() {
+#define TEAM_RED 1
+#define TEAM_BLUE 2
 
-}
+#define LEFT_SIDE 3
+#define RIGHT_SIDE 4
 
-void _auton_match_generic() {
+/*
+    Odometry and Pure Pursuit are not magic
+
+    It is possible to get perfectly consistent results without tracking wheels,
+    but it is also possible to have extremely inconsistent results without tracking wheels.
+    When you don't use tracking wheels, you need to:
+    - avoid wheel slip
+    - avoid wheelies
+    - avoid throwing momentum around (super harsh turns, like in the example below)
+    You can do cool curved motions, but you have to give your robot the best chance
+    to be consistent
+*/
+
+static void _auton_match_generic(int color, int side) {
 
 }
 
 void auton_blue_left() {
-
+    _auton_match_generic(TEAM_BLUE, LEFT_SIDE);
 }
 
 void auton_blue_right() {
-    
+    _auton_match_generic(TEAM_BLUE, RIGHT_SIDE);
 }
 
 void auton_red_left() {
-
+    _auton_match_generic(TEAM_RED, LEFT_SIDE);
 }
 
 void auton_red_right() {
+    _auton_match_generic(TEAM_RED, RIGHT_SIDE);
+}
+
+void auton_skills() {
 
 }
