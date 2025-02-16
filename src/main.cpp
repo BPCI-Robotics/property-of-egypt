@@ -1,4 +1,4 @@
-#include "main.h"
+#include "main.hpp"
 
 const int BLUE_SIG_ID = 1;
 const int RED_SIG_ID = 2;

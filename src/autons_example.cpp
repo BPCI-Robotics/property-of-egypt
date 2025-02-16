@@ -1,4 +1,4 @@
-#include "main.h"
+#include "main.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
