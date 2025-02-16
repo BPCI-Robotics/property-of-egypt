@@ -1,20 +1,5 @@
 #include "main.h"
 
-Controller controller (pros::E_CONTROLLER_MASTER);
-
-MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorUnits::counts);
-MotorGroup right_motors ({-4,5, -6}, v5::MotorGears::blue, v5::MotorUnits::counts);
-
-Motor lift_intake (-7, v5::MotorGears::blue, v5::MotorUnits::counts);
-Motor wall_stake (8, v5::MotorGears::red, v5::MotorUnits::degrees); 
-
-Vision vision_sensor (9, E_VISION_ZERO_CENTER);
-
-adi::Pneumatics stake_piston ({1, 'a'}, false, false);
-adi::Pneumatics doink_piston ({2, 'b'}, false, false);
-
-adi::Button donut_presence_sensor (4);
-
 const int BLUE_SIG_ID = 1;
 const int RED_SIG_ID = 2;
 
@@ -27,8 +12,10 @@ int ENEMY_SIG_ID = 2;
 void initialize() {
 	pros::lcd::initialize();
 
-	static vision_signature_s_t blue_sig = vision_sensor.signature_from_utility(BLUE_SIG_ID, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0);
-	static vision_signature_s_t red_sig =  vision_sensor.signature_from_utility(RED_SIG_ID,  7935, 9719, 8827,-1261, -289, -775, 2.5, 0);
+	static vision_signature blue_sig = vision_sensor.signature_from_utility(BLUE_SIG_ID, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0);
+	static vision_signature red_sig =  vision_sensor.signature_from_utility(RED_SIG_ID,  7935, 9719, 8827,-1261, -289, -775, 2.5, 0);
+
+    wall_stake.tare_position();
 
 	vision_sensor.set_signature(BLUE_SIG_ID, &blue_sig);
 	vision_sensor.set_signature(RED_SIG_ID, &red_sig);
@@ -42,7 +29,18 @@ void initialize() {
         {"Blue\n\nRight", auton_blue_right},
         {"Skills Auton\n\nPlace on the left", auton_skills}
     });
+
+    left_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	right_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
     
+}
+
+/* Convert percent velocity to RPM (out of 600). */
+/* This is always an integer, because velocity is passed as an integer anyway. */
+constexpr unsigned long long operator"" _percent(unsigned long long vel) {
+    return vel * 6;
 }
 
 void disabled() {}
@@ -52,29 +50,39 @@ void competition_initialize() {}
 void autonomous() {}
 
 void opcontrol() {
-	left_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	right_motors.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
 
 	while (true) {
-		int forwardpower = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
-    	int turnpower = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
+        
+        /* move_absolute is non-blocking. This is the intended behavior, and the controls should not be locked. */
 
-    	int left = forwardpower + turnpower;
-    	int right = forwardpower - turnpower; 
+        /* Initial position of the donut */
+        if (controller.get_digital_new_press(DIGITAL_Y)){
+            wall_stake.move_absolute(0, 70_percent);
+        }
 
-		left_motors.move_velocity(left * 6);
-		right_motors.move_velocity(right * 6);
+        /* Pick up the donut and hold it*/
+        if (controller.get_digital_new_press(DIGITAL_X)) {
+            wall_stake.move_absolute(40, 70);
+        }
 
-		delay(20);
+        /* Score the donut */
+        if (controller.get_digital_new_press(DIGITAL_A)) {
+            wall_stake.move_absolute(100, 70);
+        }
+
+		int forwardpower = controller.get_analog(ANALOG_LEFT_Y);
+    	int turnpower = controller.get_analog(ANALOG_RIGHT_X);
+
+    	chassis.opcontrol_arcade_standard(ez::SPLIT);
+
+		pros::delay(ez::util::DELAY_TIME);
 	}
 
 	// keybinds for toggling pneumatics
-	if (controller.get_digital_new_press(E_CONTROLLER_DIGITAL_R2))
+	if (controller.get_digital_new_press(DIGITAL_R2))
 		stake_piston.toggle();
 	
-	if (controller.get_digital_new_press(E_CONTROLLER_DIGITAL_R1))
+	if (controller.get_digital_new_press(DIGITAL_R1))
 		doink_piston.toggle();
 }
 
@@ -112,22 +120,4 @@ void elevator_loop() {
             }
         }
     }
-}
-
-void wall_stake_mech() {
-    //establish 0-position
-    wall_stake.tare_position();
-
-    // keybinds for wall stake mech
-    // note that move_absolute() does not wait for the function to finish, so it would be possible to change positions midway through execution
-    if (controller.get_digital(E_CONTROLLER_DIGITAL_Y)){
-        wall_stake.move_absolute(0, 70); //if pressed, this will bring the donut back to its initial position
-    }
-    if (controller.get_digital(E_CONTROLLER_DIGITAL_X)) {
-        wall_stake.move_absolute(40, 70); //if pressed, this will pick up the donut
-    }
-    if (controller.get_digital(E_CONTROLLER_DIGITAL_A)) {
-        wall_stake.move_absolute(100, 70); //if pressed, this will score the donut
-    }
-
 }
