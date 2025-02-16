@@ -99,7 +99,7 @@ void opcontrol() {
         }
 
         /* Toggle color sorting */
-        if (controller.get_digital_new_press(DIGITAL_LEFT))
+        if (controller.get_digital_new_press(DIGITAL_DOWN))
             toggle_color_sorting();
 
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
