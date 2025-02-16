@@ -11,6 +11,8 @@ int ENEMY_SIG_ID = 2;
 
 // Definition is later in file.
 void elevator_loop();
+void enable_color_sorting();
+void toggle_color_sorting();
 
 void initialize() {
 	pros::lcd::initialize();
