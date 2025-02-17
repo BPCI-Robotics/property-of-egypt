@@ -62,7 +62,39 @@ void auton_default_params() {
 */
 
 static void _auton_match_generic(int color, int side) {
+    static int enemy_sig_id;
+    if (color == TEAM_RED) 
+        enemy_sig_id = BLUE_SIG_ID;
+    else
+        enemy_sig_id = RED_SIG_ID;
+    
+    lift_intake.move_velocity(600);
 
+    color_sort::set_reject_color(color);
+    color_sort::declare_lift_intake_is_running(true);
+    color_sort::start();
+    
+    /* TODO: write actual code here. */
+    chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+    chassis.pid_wait();
+
+    chassis.pid_turn_set(45_deg, TURN_SPEED);
+    chassis.pid_wait();
+
+    chassis.pid_turn_set(-45_deg, TURN_SPEED);
+    chassis.pid_wait();
+
+    chassis.pid_turn_set(0_deg, TURN_SPEED);
+    chassis.pid_wait();
+
+    chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
+    chassis.pid_wait();
+}
+
+void auton_skills() {
+    lift_intake.move_velocity(600);
+
+    /* Use no color sorting in skills. */
 }
 
 void auton_blue_left() {
@@ -79,8 +111,4 @@ void auton_red_left() {
 
 void auton_red_right() {
     _auton_match_generic(TEAM_RED, RIGHT_SIDE);
-}
-
-void auton_skills() {
-
 }

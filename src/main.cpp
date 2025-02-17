@@ -1,19 +1,5 @@
 #include "main.hpp"
 
-const int BLUE_SIG_ID = 1;
-const int RED_SIG_ID = 2;
-
-int MY_SIG_ID = 1;
-int ENEMY_SIG_ID = 2;
-
-#define LEFT 0
-#define RIGHT 1
-
-// Definition is later in file.
-void elevator_loop();
-void enable_color_sorting();
-void toggle_color_sorting();
-
 void initialize() {
 
     /* Legacy ports need time to start */
@@ -72,15 +58,15 @@ void autonomous() {
     chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
 
     /* This is equally applicable to autonomous. */
-    enable_color_sorting();
 
     ez::as::auton_selector.selected_auton_call(); 
 }
 
-bool lift_intake_running;
-
 void opcontrol() {
-    enable_color_sorting();
+
+    /* The color to reject was already set in auton... right? */
+    color_sort::start();
+    
     chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
 
 	while (true) {
@@ -110,87 +96,24 @@ void opcontrol() {
         /* Move the lift intake */
         if (controller.get_digital(DIGITAL_L2)) {
             lift_intake.move_velocity(600);
-            lift_intake_running = true;
+            color_sort::declare_lift_intake_is_running(true);
         }
         else if (controller.get_digital(DIGITAL_L1)) {
             lift_intake.move_velocity(-600);
-            lift_intake_running = true;
+            color_sort::declare_lift_intake_is_running(true);
         }
         else {
             lift_intake.move_velocity(0);
-            lift_intake_running = false;
+            color_sort::declare_lift_intake_is_running(false);
         }
 
         /* Toggle color sorting */
         if (controller.get_digital_new_press(DIGITAL_DOWN))
-            toggle_color_sorting();
+            color_sort::toggle();
 
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
 
         /* This is required for the chassis.opcontrol_arcade_standard function to work. */
 		delay(ez::util::DELAY_TIME);
 	}
-}
-
-/* None of these functions claim to be thread-safe. There's only one thread which calls them anyway. */
-bool color_sorting_enabled = false;
-
-void enable_color_sorting() {
-    if (color_sorting_enabled)
-        return;
-    
-    color_sorting_enabled = true;
-    pros::Task color_sort_task(elevator_loop);
-}
-
-void toggle_color_sorting() {
-    if (color_sorting_enabled) 
-        color_sorting_enabled = false;
-    else 
-        enable_color_sorting();
-    
-}
-
-void elevator_loop() {
-    while (color_sorting_enabled) {
-        pros::delay(20);
-
-        /* Exit: the lift intake isn't running */
-        if (!lift_intake_running) 
-            continue;
-
-        vision_object enemy_donut = vision_sensor.get_by_sig(0, ENEMY_SIG_ID);
-
-        /* Exit: the donut is too far away (so it appears small) */
-        if (enemy_donut.height < 30 || enemy_donut.width < 70)
-            continue;
-
-        /* Hold on, I found something. Let's wait until the switch is hit. */
-        int timer = 0;
-        bool akita_neru = false;
-
-        while (!donut_presence_sensor.get_new_press()) {
-            delay(10);
-            timer += 10;
-
-            /* 1. Two seconds have passed and the donut did not make it to the top. */
-            /* 2. The lift intake is not spinning anymore. No need to continue waiting. */
-            /* 3. The driver has asked to disable color sorting. No need to continue waiting. */
-            akita_neru = (timer > 2000 || !lift_intake_running || !color_sorting_enabled);
-            if (akita_neru)
-                break;
-        }
-
-        /* Exit: the donut did not make it to the top. */
-        if (akita_neru)
-            continue;
-
-        int save_direction = lift_intake.get_direction();
-
-        delay(100);
-        lift_intake.brake();
-        delay(250);
-
-        lift_intake.move_velocity(600 * (save_direction == FORWARD ? 1 : -1));
-    }
 }

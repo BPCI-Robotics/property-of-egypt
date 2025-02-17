@@ -6,6 +6,7 @@
 #include "EZ-Template/api.hpp"
 
 #include "autons.hpp"
+#include "color_sort.hpp"
 
 extern "C" {
     void autonomous(void);
