@@ -25,7 +25,7 @@ inline ez::Drive chassis(
     {-4, 5, -6},
     10,  // IMU Port
 
-    3.375,   // Wheel Diameter (3.25 + 0.125)
+    3.35,   // Wheel Diameter (inches)
     360.0);  // Wheel RPM
 
 inline Motor lift_intake (-7, v5::MotorGears::blue, v5::MotorUnits::degrees);

@@ -15,17 +15,33 @@ void enable_color_sorting();
 void toggle_color_sorting();
 
 void initialize() {
-	pros::lcd::initialize();
 
+    /* Legacy ports need time to start */
+    delay(500);
+
+    /* Disable changing the controller curve */
+    chassis.opcontrol_curve_buttons_toggle(false);
+
+    /* This sets the kP for braking (2 is recommended) */
+    chassis.opcontrol_drive_activebrake_set(2.0);
+
+    /* Use no special curving when driving. */
+    chassis.opcontrol_curve_default_set(0.0, 0.0);
+    wall_stake.tare_position();
+    
+	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
+
+    /* Vision sensor configurations */
 	static vision_signature blue_sig = vision_sensor.signature_from_utility(BLUE_SIG_ID, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0);
 	static vision_signature red_sig =  vision_sensor.signature_from_utility(RED_SIG_ID,  7935, 9719, 8827,-1261, -289, -775, 2.5, 0);
-
-    wall_stake.tare_position();
 
 	vision_sensor.set_signature(BLUE_SIG_ID, &blue_sig);
 	vision_sensor.set_signature(RED_SIG_ID, &red_sig);
 
 	vision_sensor.clear_led();
+
+    auton_default_params();
 
     ez::as::auton_selector.autons_add({
         {"Red\n\nLeft", auton_red_left},
@@ -35,8 +51,12 @@ void initialize() {
         {"Skills Auton\n\nPlace on the left", auton_skills}
     });
 
-	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
+    lcd::initialize();
+    chassis.initialize();
+    ez::as::initialize();
+
+    controller.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+
 }
 
 void disabled() {}
@@ -61,6 +81,7 @@ bool lift_intake_running;
 
 void opcontrol() {
     enable_color_sorting();
+    chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
 
 	while (true) {
         
