@@ -110,6 +110,13 @@ void opcontrol() {
         /* Toggle color sorting */
         if (controller.get_digital_new_press(DIGITAL_DOWN))
             color_sort::toggle();
+        
+        /* There's probably a better solution to this problem. I don't know what it is. */
+        if (controller.get_digital_new_press(DIGITAL_LEFT))
+            color_sort::set_reject_color(RED_SIG_ID);
+        
+        if (controller.get_digital_new_press(DIGITAL_RIGHT))
+            color_sort::set_reject_color(BLUE_SIG_ID);
 
     	chassis.opcontrol_arcade_standard(ez::SPLIT);
 
