@@ -34,7 +34,8 @@
  */
 // #define PROS_USE_LITERALS
 
-#include "api.h"
+#include "api.h" // IWYU pragma: keep
+#include "lift_intake.hpp"
 
 /**
  * You should add more #includes here

@@ -1,21 +1,15 @@
-#include "main.h"
-#include "lemlib/api.hpp"
-#include "pros/vision.hpp"
-#include "pros/vision.h"
+#include "main.hpp"
+#include "lemlib/api.hpp" // IWYU pragma: keep
 
 using namespace pros;
 
 Controller controller(CONTROLLER_MASTER);
 
-Motor lift_intake (7, MotorGears::blue, MotorUnits::counts);
+adi::Pneumatics stake_grab ('a', false, false);
+adi::Pneumatics doink_piston ('b', false, false);
 
-adi::Pneumatics stake_grab_left ('a', false, false);
-adi::Pneumatics stake_grab_right ('b', false, false);
-
-MotorGroup left_motors ({1, -2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
+MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorUnits::counts);
 MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorUnits::counts);
-
-v5::Vision vision_sensor (9);
 
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&left_motors,
@@ -51,30 +45,18 @@ lemlib::ControllerSettings angular_controller(  2, // proportional gain (kP)
 );
 
 // odometry sensors
-lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel 1
-                            nullptr, // vertical tracking wheel 2
-                            nullptr, // horizontal tracking wheel 1
-                            nullptr, // horizontal tracking wheel 2
-                            nullptr  // inertial sensor
-);
+v5::Imu imu(10);
+
+lemlib::OdomSensors sensors(nullptr, nullptr, nullptr, nullptr, &imu);
 
 lemlib::Chassis chassis(drivetrain, 
                         lateral_controller, 
                         angular_controller, 
                         sensors);
 
-#define BLUE_SIG_ID 1
-#define RED_SIG_ID  2
-
 void initialize() {
     lcd::initialize();
     chassis.calibrate();
-
-    static vision_signature_s_t blue_signature = Vision::signature_from_utility (1, -3775, -3259, -3517, 4809, 7525, 6167, 3.0, 0);
-    static vision_signature_s_t red_signature =  Vision::signature_from_utility (2,  7457,  9721,  8589, -611,    1, -305, 3.0, 0);
-
-    vision_sensor.set_signature(BLUE_SIG_ID, &blue_signature);
-    vision_sensor.set_signature(RED_SIG_ID,  &red_signature);
 
     // This code passes a lambda to an object constructor to create an asynchronous routine.
     // C++ is weird.
@@ -100,27 +82,27 @@ void opcontrol() {
     while (true) {
 
         if (controller.get_digital(DIGITAL_L1)) 
-            lift_intake.move_velocity(600);
+            lift_intake::spin(FORWARD);
 
         else if (controller.get_digital(DIGITAL_L2))
-            lift_intake.move_velocity(-600);
+            lift_intake::spin(REVERSE);
 
         else 
-            lift_intake.move_velocity(0);
+            lift_intake::stop();
 
         if (controller.get_digital(DIGITAL_R1)) {
-            stake_grab_left.toggle();
-            stake_grab_right.toggle();
+            stake_grab.toggle();
+        }
+
+        if (controller.get_digital_new_press(DIGITAL_R2)) {
+            doink_piston.toggle();
         }
 
         // Controller code
-        int leftY = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightX = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
+        int leftY = controller.get_analog(ANALOG_LEFT_Y);
+        int rightX = controller.get_analog(ANALOG_RIGHT_X);
 
         chassis.curvature(leftY, rightX);
-
-        vision_object blue_obj = vision_sensor.get_by_sig(0, BLUE_SIG_ID);
-        vision_object red_obj = vision_sensor.get_by_sig(0, RED_SIG_ID);
 
         // pros:: is specified, since delay() is ambiguous.
         pros::delay(20);
