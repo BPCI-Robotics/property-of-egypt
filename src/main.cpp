@@ -1,126 +1,128 @@
-#include "main.hpp"
+#include "main.h"
+#include "lemlib/api.hpp"
+#include "pros/vision.hpp"
+#include "pros/vision.h"
+
+using namespace pros;
+
+Controller controller(CONTROLLER_MASTER);
+
+Motor lift_intake (7, MotorGears::blue, MotorUnits::counts);
+
+adi::Pneumatics stake_grab_left ('a', false, false);
+adi::Pneumatics stake_grab_right ('b', false, false);
+
+MotorGroup left_motors ({1, -2, -3}, v5::MotorGears::blue, v5::MotorUnits::counts);
+MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorUnits::counts);
+
+v5::Vision vision_sensor (9);
+
+// drivetrain settings
+lemlib::Drivetrain drivetrain(&left_motors,
+                              &right_motors,
+                              10, // TODO: set track width (inches)
+                              lemlib::Omniwheel::NEW_325,
+                              360,
+                              2 // higher = faster, less accurate
+);
+
+// lateral PID controller
+lemlib::ControllerSettings lateral_controller( 10, // proportional gain (kP)
+                                                0, // integral gain (kI)
+                                                3, // derivative gain (kD)
+                                                3, // anti windup
+                                                1, // small error range, in inches
+                                              100, // small error range timeout, in milliseconds
+                                                3, // large error range, in inches
+                                              500, // large error range timeout, in milliseconds
+                                               20  // maximum acceleration (slew)
+);
+
+// angular PID controller
+lemlib::ControllerSettings angular_controller(  2, // proportional gain (kP)
+                                                0, // integral gain (kI)
+                                               10, // derivative gain (kD)
+                                                3, // anti windup
+                                                1, // small error range, in degrees
+                                              100, // small error range timeout, in milliseconds
+                                                3, // large error range, in degrees
+                                              500, // large error range timeout, in milliseconds
+                                                0  // maximum acceleration (slew)
+);
+
+// odometry sensors
+lemlib::OdomSensors sensors(nullptr, // vertical tracking wheel 1
+                            nullptr, // vertical tracking wheel 2
+                            nullptr, // horizontal tracking wheel 1
+                            nullptr, // horizontal tracking wheel 2
+                            nullptr  // inertial sensor
+);
+
+lemlib::Chassis chassis(drivetrain, 
+                        lateral_controller, 
+                        angular_controller, 
+                        sensors);
+
+#define BLUE_SIG_ID 1
+#define RED_SIG_ID  2
 
 void initialize() {
-
-    /* Legacy ports need time to start */
-    delay(500);
-
-    /* Disable changing the controller curve */
-    chassis.opcontrol_curve_buttons_toggle(false);
-
-    /* This sets the kP for braking (2 is recommended) */
-    chassis.opcontrol_drive_activebrake_set(2.0);
-
-    /* Use no special curving when driving. */
-    chassis.opcontrol_curve_default_set(0.0, 0.0);
-    wall_stake.tare_position();
-    
-	lift_intake.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	wall_stake.set_brake_mode(MOTOR_BRAKE_HOLD);
-
-    /* Vision sensor configurations */
-	static vision_signature blue_sig = vision_sensor.signature_from_utility(BLUE_SIG_ID, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0);
-	static vision_signature red_sig =  vision_sensor.signature_from_utility(RED_SIG_ID,  7935, 9719, 8827,-1261, -289, -775, 2.5, 0);
-
-	vision_sensor.set_signature(BLUE_SIG_ID, &blue_sig);
-	vision_sensor.set_signature(RED_SIG_ID, &red_sig);
-
-	vision_sensor.clear_led();
-
-    auton_default_params();
-
-    ez::as::auton_selector.autons_add({
-        {"Red\n\nLeft", auton_red_left},
-        {"Red\n\nRight", auton_red_right},
-        {"Blue\n\nLeft", auton_blue_left},
-        {"Blue\n\nRight", auton_blue_right},
-        {"Skills Auton\n\nPlace on the left", auton_skills}
-    });
-
     lcd::initialize();
-    chassis.initialize();
-    ez::as::initialize();
+    chassis.calibrate();
 
-    controller.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+    static vision_signature_s_t blue_signature = Vision::signature_from_utility (1, -3775, -3259, -3517, 4809, 7525, 6167, 3.0, 0);
+    static vision_signature_s_t red_signature =  Vision::signature_from_utility (2,  7457,  9721,  8589, -611,    1, -305, 3.0, 0);
 
+    vision_sensor.set_signature(BLUE_SIG_ID, &blue_signature);
+    vision_sensor.set_signature(RED_SIG_ID,  &red_signature);
+
+    // This code passes a lambda to an object constructor to create an asynchronous routine.
+    // C++ is weird.
+    Task screen_task([&]() {
+        while (true) {
+            lemlib::Pose pose = chassis.getPose();
+
+            lcd::print(0, "    X: %f", pose.x);
+            lcd::print(1, "    Y: %f", pose.y);
+            lcd::print(2, "Theta: %f", pose.theta);
+
+            pros::delay(100);
+        }
+    });
 }
 
 void disabled() {}
 
-void competition_initialize() {}
-
-/* The autonomous code is actually at autons.cpp */
-void autonomous() {
-    chassis.pid_targets_reset();                // Resets PID targets to 0
-    chassis.drive_imu_reset();                  // Reset gyro position to 0
-    chassis.drive_sensor_reset();               // Reset drive sensors to 0
-    chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
-    chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
-
-    /* This is equally applicable to autonomous. */
-
-    ez::as::auton_selector.selected_auton_call(); 
-}
+void autonomous() {}
 
 void opcontrol() {
 
-    /* The color to reject was already set in auton... right? */
-    color_sort::start();
-    
-    chassis.drive_brake_set(MOTOR_BRAKE_BRAKE);
+    while (true) {
 
-	while (true) {
-        
-        /* move_absolute is non-blocking. This is the intended behavior, and the controls should not be locked. */
-
-        /* Initial position of the donut */
-        if (controller.get_digital_new_press(DIGITAL_Y))
-            wall_stake.move_absolute(0, 70);
-
-        /* Pick up the donut and hold it */
-        if (controller.get_digital_new_press(DIGITAL_X)) 
-            wall_stake.move_absolute(40, 70);
-
-        /* Score the donut */
-        if (controller.get_digital_new_press(DIGITAL_A))
-            wall_stake.move_absolute(100, 70);
-        
-        /* Toggle the doinker */
-        if (controller.get_digital_new_press(DIGITAL_R1))
-            doink_piston.toggle();
-
-        /* Toggle the stake grabber */
-        if (controller.get_digital_new_press(DIGITAL_R2))
-            stake_piston.toggle();
-        
-        /* Move the lift intake */
-        if (controller.get_digital(DIGITAL_L2)) {
+        if (controller.get_digital(DIGITAL_L1)) 
             lift_intake.move_velocity(600);
-            color_sort::declare_lift_intake_is_running(true);
-        }
-        else if (controller.get_digital(DIGITAL_L1)) {
+
+        else if (controller.get_digital(DIGITAL_L2))
             lift_intake.move_velocity(-600);
-            color_sort::declare_lift_intake_is_running(true);
-        }
-        else {
+
+        else 
             lift_intake.move_velocity(0);
-            color_sort::declare_lift_intake_is_running(false);
+
+        if (controller.get_digital(DIGITAL_R1)) {
+            stake_grab_left.toggle();
+            stake_grab_right.toggle();
         }
 
-        /* Toggle color sorting */
-        if (controller.get_digital_new_press(DIGITAL_DOWN))
-            color_sort::toggle();
-        
-        /* There's probably a better solution to this problem. I don't know what it is. */
-        if (controller.get_digital_new_press(DIGITAL_LEFT))
-            color_sort::set_reject_color(RED_SIG_ID);
-        
-        if (controller.get_digital_new_press(DIGITAL_RIGHT))
-            color_sort::set_reject_color(BLUE_SIG_ID);
+        // Controller code
+        int leftY = controller.get_analog(E_CONTROLLER_ANALOG_LEFT_Y);
+        int rightX = controller.get_analog(E_CONTROLLER_ANALOG_RIGHT_X);
 
-    	chassis.opcontrol_arcade_standard(ez::SPLIT);
+        chassis.curvature(leftY, rightX);
 
-        /* This is required for the chassis.opcontrol_arcade_standard function to work. */
-		delay(ez::util::DELAY_TIME);
-	}
+        vision_object blue_obj = vision_sensor.get_by_sig(0, BLUE_SIG_ID);
+        vision_object red_obj = vision_sensor.get_by_sig(0, RED_SIG_ID);
+
+        // pros:: is specified, since delay() is ambiguous.
+        pros::delay(20);
+    }
 }
