@@ -5,11 +5,28 @@ using namespace pros;
 
 Controller controller(CONTROLLER_MASTER);
 
+/*
+a. piston stake grabber (off; on is true)
+b. piston doinker (off; on is true)
+*/
 adi::Pneumatics stake_grab ('a', false, false);
 adi::Pneumatics doink_piston ('b', false, false);
 
-MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorUnits::counts);
-MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorUnits::counts);
+/*
+drivetrain blue coast:
+    1. motor left
+    2. motor left reversed
+    3. motor left
+    
+    4. motor right reversed
+    5. motor right
+    6. motor right reversed
+*/
+MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
+MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
+
+// 10. IMU (inertial sensor)
+v5::Imu imu(10);
 
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&left_motors,
@@ -44,9 +61,6 @@ lemlib::ControllerSettings angular_controller(  2, // proportional gain (kP)
                                                 0  // maximum acceleration (slew)
 );
 
-// odometry sensors
-v5::Imu imu(10);
-
 lemlib::OdomSensors sensors(nullptr, nullptr, nullptr, nullptr, &imu);
 
 lemlib::Chassis chassis(drivetrain, 
@@ -57,6 +71,7 @@ lemlib::Chassis chassis(drivetrain,
 void initialize() {
     lcd::initialize();
     chassis.calibrate();
+    chassis.setBrakeMode(MOTOR_BRAKE_COAST);
 
     Task screen_task([&]() {
         while (true) {
@@ -73,9 +88,14 @@ void initialize() {
 
 void disabled() {}
 
-void autonomous() {}
+void autonomous() {
+    lift_intake::init(REJECT_RED);
+    wall_stake::init();
+}
 
 void opcontrol() {
+    lift_intake::init(REJECT_RED);
+    wall_stake::init();
 
     while (true) {
 
@@ -87,14 +107,27 @@ void opcontrol() {
 
         else 
             lift_intake::stop();
-
-        if (controller.get_digital(DIGITAL_R1)) {
+        
+        /* Pneumatics logic */
+        if (controller.get_digital_new_press(DIGITAL_R1))
             stake_grab.toggle();
-        }
-
-        if (controller.get_digital_new_press(DIGITAL_R2)) {
+        
+        if (controller.get_digital_new_press(DIGITAL_R2))
             doink_piston.toggle();
-        }
+
+        /* Wall stake logic */
+        if (controller.get_digital_new_press(DIGITAL_X))
+            wall_stake::pickup();
+
+        else if (controller.get_digital_new_press(DIGITAL_Y))
+            wall_stake::hold();
+
+        else if (controller.get_digital_new_press(DIGITAL_A))
+            wall_stake::score();
+
+        else if (controller.get_digital_new_press(DIGITAL_B))
+            wall_stake::reset();
+
 
         // Controller code
         int leftY = controller.get_analog(ANALOG_LEFT_Y);
@@ -102,7 +135,6 @@ void opcontrol() {
 
         chassis.curvature(leftY, rightX);
 
-        // pros:: is specified, since delay() is ambiguous.
-        pros::delay(20);
+        delay(20);
     }
 }

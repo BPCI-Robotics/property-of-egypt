@@ -7,6 +7,11 @@ using namespace pros;
 static int reject_color;
 static bool color_sort_enabled = true;
 
+/*
+7. lift+intake blue brake motor reversed
+9. vision sensor
+c. donut detector limit switch
+*/
 static Motor motor (7, MotorGears::blue, MotorUnits::counts);
 static v5::Vision vision (9);
 static adi::Button limit_switch('c');
@@ -17,6 +22,7 @@ static void loop(void *);
 
 void init(int color_to_reject) {
     reject_color = color_to_reject;
+    motor.set_brake_mode(MOTOR_BRAKE_BRAKE);
 
     if (color_to_reject == REJECT_RED) {
         static vision_signature_s_t red_signature =  Vision::signature_from_utility (1,  7457,  9721,  8589, -611,    1, -305, 3.0, 0);
@@ -57,10 +63,10 @@ static void loop(void *) {
             delay(20);
 
         delay(10);
-        lift_intake::stop();
+        stop();
         delay(250);
 
-        lift_intake::spin(FORWARD);
+        spin(FORWARD);
     }
 }
 

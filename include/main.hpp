@@ -36,6 +36,7 @@
 
 #include "api.h" // IWYU pragma: keep
 #include "lift_intake.hpp"
+#include "wall_stake.hpp"
 
 /**
  * You should add more #includes here
