@@ -58,8 +58,6 @@ void initialize() {
     lcd::initialize();
     chassis.calibrate();
 
-    // This code passes a lambda to an object constructor to create an asynchronous routine.
-    // C++ is weird.
     Task screen_task([&]() {
         while (true) {
             lemlib::Pose pose = chassis.getPose();
