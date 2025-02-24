@@ -62,8 +62,13 @@ static void loop(void *) {
         while (!limit_switch.get_new_press()) 
             delay(20);
 
-        delay(10);
-        stop();
+        delay(25);
+
+        spin(REVERSE);
+        while (motor.get_actual_velocity() > -200)
+            delay(20);
+
+        spin(FORWARD);
         delay(250);
 
         spin(FORWARD);

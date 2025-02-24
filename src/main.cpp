@@ -88,9 +88,16 @@ void initialize() {
 
 void disabled() {}
 
+ASSET(example_txt);
+
 void autonomous() {
     lift_intake::init(REJECT_RED);
     wall_stake::init();
+
+    chassis.setPose(0.0, 0.0, 0.0);
+    chassis.follow(example_txt, 15, 4000, true);
+    
+    chassis.waitUntilDone();
 }
 
 void opcontrol() {
@@ -135,6 +142,6 @@ void opcontrol() {
 
         chassis.curvature(leftY, rightX);
 
-        delay(20);
+        delay(10);
     }
 }
