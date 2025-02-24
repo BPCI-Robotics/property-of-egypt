@@ -73,6 +73,7 @@ void initialize() {
     chassis.calibrate();
     chassis.setBrakeMode(MOTOR_BRAKE_COAST);
 
+    /*
     Task screen_task([&]() {
         while (true) {
             lemlib::Pose pose = chassis.getPose();
@@ -84,6 +85,10 @@ void initialize() {
             pros::delay(100);
         }
     });
+    */
+    pros::lcd::set_text(1, "Hello PROS User!");
+
+	pros::lcd::register_btn1_cb(on_center_button);
 }
 
 void disabled() {}
