@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "Eye of Rah",
+    "project_name": "Property of Egypt",
     "target": "v5",
     "templates": {
       "LemLib": {
@@ -441,7 +441,9 @@
     },
     "upload_options": {
       "after": "screen",
-      "description": "High Stakes 24/25"
+      "description": "LemLib program version slot 2",
+      "slot": 2,
+      "icon": "ufo"
     },
     "use_early_access": false
   }

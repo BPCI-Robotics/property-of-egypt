@@ -81,3 +81,11 @@ void opcontrol(void);
 #endif
 
 #endif  // _PROS_MAIN_H_
+
+namespace auton_selector {
+    void btn0_cb();
+    void btn1_cb();
+    void btn2_cb();
+}
+
+using namespace pros;

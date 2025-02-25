@@ -88,7 +88,9 @@ void initialize() {
     */
     pros::lcd::set_text(1, "Hello PROS User!");
 
-	pros::lcd::register_btn1_cb(on_center_button);
+	pros::lcd::register_btn0_cb(auton_selector::btn0_cb);
+    pros::lcd::register_btn1_cb(auton_selector::btn1_cb);
+    pros::lcd::register_btn2_cb(auton_selector::btn2_cb);
 }
 
 void disabled() {}
