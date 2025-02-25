@@ -1,17 +1,3 @@
-/**
- * \file main.h
- *
- * Contains common definitions and header files used throughout your PROS
- * project.
- *
- * \copyright Copyright (c) 2017-2023, Purdue University ACM SIGBots.
- * All rights reserved.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
 #ifndef _PROS_MAIN_H_
 #define _PROS_MAIN_H_
 
@@ -82,10 +68,33 @@ void opcontrol(void);
 
 #endif  // _PROS_MAIN_H_
 
+/* Here I define all my namespaces. */
+
 namespace auton_selector {
     void btn0_cb();
     void btn1_cb();
     void btn2_cb();
 }
+
+namespace wall_stake {
+    void init();
+    void pickup();
+    void hold();
+    void score();
+    void reset();
+}
+
+#define REVERSE -1
+#define FORWARD  1
+
+#define REJECT_RED 1
+#define REJECT_BLUE 2
+
+namespace lift_intake {
+    void init(int color_to_reject);
+    void stop();
+    void spin(int direction);
+    
+} /* namespace color_sort */
 
 using namespace pros;
