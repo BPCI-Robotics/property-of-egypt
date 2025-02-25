@@ -17,8 +17,16 @@ namespace wall_stake {
         motor.move_absolute(50, vel);
     }
 
-    void hold() {
-        motor.move_absolute(140, vel);
+    void forward() {
+        motor.move_velocity(vel);
+    }
+
+    void reverse() {
+        motor.move_velocity(-vel);
+    }
+
+    void stop() {
+        motor.move_velocity(0);
     }
 
     void score() {
