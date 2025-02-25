@@ -21,8 +21,6 @@
 // #define PROS_USE_LITERALS
 
 #include "api.h" // IWYU pragma: keep
-#include "lift_intake.hpp"
-#include "wall_stake.hpp"
 
 /**
  * You should add more #includes here
@@ -79,8 +77,9 @@ namespace auton_selector {
 namespace wall_stake {
     void init();
     void pickup();
-    void hold();
-    void score();
+    void forward();
+    void reverse();
+    void stop();
     void reset();
 }
 
