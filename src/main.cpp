@@ -73,19 +73,18 @@ void initialize() {
     chassis.calibrate();
     chassis.setBrakeMode(MOTOR_BRAKE_COAST);
 
-    /*
     Task screen_task([&]() {
         while (true) {
             lemlib::Pose pose = chassis.getPose();
 
-            lcd::print(0, "    X: %f", pose.x);
-            lcd::print(1, "    Y: %f", pose.y);
-            lcd::print(2, "Theta: %f", pose.theta);
+            lcd::print(4, "    X: %f", pose.x);
+            lcd::print(5, "    Y: %f", pose.y);
+            lcd::print(6, "Theta: %f", pose.theta);
 
             pros::delay(100);
         }
     });
-    */
+
 
 	pros::lcd::register_btn0_cb(auton_selector::btn0_cb);
     pros::lcd::register_btn1_cb(auton_selector::btn1_cb);
@@ -122,10 +121,10 @@ void opcontrol() {
             lift_intake::stop();
         
         /* Pneumatics logic */
-        if (controller.get_digital_new_press(DIGITAL_R1))
+        if (controller.get_digital_new_press(DIGITAL_R2))
             stake_grab.toggle();
         
-        if (controller.get_digital_new_press(DIGITAL_R2))
+        if (controller.get_digital_new_press(DIGITAL_R1))
             doink_piston.toggle();
 
         /* Wall stake logic */
@@ -133,18 +132,23 @@ void opcontrol() {
             wall_stake::pickup();
 
         else if (controller.get_digital_new_press(DIGITAL_Y))
-            wall_stake::hold();
-
-        else if (controller.get_digital_new_press(DIGITAL_A))
-            wall_stake::score();
-
-        else if (controller.get_digital_new_press(DIGITAL_B))
             wall_stake::reset();
+
+        
+        if (controller.get_digital(DIGITAL_B))
+            wall_stake::reverse();
+        else
+            wall_stake::stop();
+        
+        if (controller.get_digital(DIGITAL_A))
+            wall_stake::forward();
+        else
+            wall_stake::stop();
 
 
         // Controller code
         int leftY = controller.get_analog(ANALOG_LEFT_Y);
-        int rightX = controller.get_analog(ANALOG_RIGHT_X);
+        int rightX = -controller.get_analog(ANALOG_RIGHT_X);
 
         chassis.curvature(leftY, rightX);
 
