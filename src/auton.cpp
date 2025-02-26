@@ -1,16 +1,5 @@
 #include "main.hpp"
 
-/*
-    if not competition.is_field_control() and not competition.is_competition_switch():
-        print("Not field control.")
-        if config["Testing"] == "Driver Control":
-            print("Driver")
-            driver()
-            exit()
-
-*/
-
-
 static void auton_skills() {
     
 }
