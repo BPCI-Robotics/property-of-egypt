@@ -85,10 +85,11 @@ void initialize() {
         }
     });
 
+    auton_selector::init(auton::set_config);
 
-	pros::lcd::register_btn0_cb(auton_selector::btn0_cb);
-    pros::lcd::register_btn1_cb(auton_selector::btn1_cb);
-    pros::lcd::register_btn2_cb(auton_selector::btn2_cb);
+	lcd::register_btn0_cb(auton_selector::btn0_cb);
+    lcd::register_btn1_cb(auton_selector::btn1_cb);
+    lcd::register_btn2_cb(auton_selector::btn2_cb);
 }
 
 void disabled() {}
@@ -96,17 +97,11 @@ void disabled() {}
 ASSET(example_txt);
 
 void autonomous() {
-    lift_intake::init(REJECT_RED);
-    wall_stake::init();
-
-    chassis.setPose(0.0, 0.0, 0.0);
-    chassis.follow(example_txt, 15, 4000, true);
-    
-    chassis.waitUntilDone();
+    auton::start();
 }
 
 void opcontrol() {
-    lift_intake::init(REJECT_RED);
+    lift_intake::init();
     wall_stake::init();
 
     while (true) {

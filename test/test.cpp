@@ -1,4 +1,7 @@
-#include "main.hpp" // IWYU pragma: keep
+#include <stdio.h>
+#include <unordered_map>
+#include <string>
+#include <iostream>
 
 static void submit();
 
@@ -28,7 +31,7 @@ static option options[] = {
     {.idx=0, .cnt=2, .name="Team color", .options={"Red", "Blue"}},
     {.idx=0, .cnt=2, .name="Direction", .options={"Left", "Right"}},
     {.idx=0, .cnt=3, .name="Auton type", .options={"Quals", "Elims", "Skills"}},
-    {.idx=0, .cnt=2, .name="Testing", .options={"Nothing", "Driver Control", "Auton"}},
+    {.idx=0, .cnt=2, .name="Testing", .options={"Driver Control", "Auton"}},
     {.idx=0, .cnt=3, .name="Submit", .options={"", "Are you sure?", "SUBMITTED"}}
 };
 
@@ -36,16 +39,14 @@ static unsigned options_idx = 0;
 static const size_t options_len = sizeof(options) / sizeof(option);
 
 static void lcd_update() {
-    lcd::clear();
-
     if (options[4].idx == 2) {
         submit();
-        lcd::print(0, "Submitted configuration.");
+        puts("Submitted configuration.");
         return;
     }
 
     for (unsigned i = 0; i < options_len; i++) {
-        lcd::print(i, "%c %s: %s", i == options_idx ? '>' : ' ', options[i].name, options[i].options[options[i].idx]);
+        printf("%c %s: %s\n", i == options_idx ? '>' : ' ', options[i].name, options[i].options[options[i].idx]);
     }
 }
 
@@ -99,5 +100,35 @@ namespace auton_selector {
 
         next(options + options_idx);
         lcd_update();
+    }
+}
+
+void handler(uss s) {
+    std::cout << s["Team color"] << std::endl;
+    std::cout << s["Direction"] << std::endl;
+    std::cout << s["Auton type"] << std::endl;
+    std::cout << s["Testing"] << std::endl;
+    std::cout << s["Submit"] << std::endl;
+}
+
+int main() {
+    auton_selector::init(handler);
+
+    char c;
+    while (true) {
+        c = getchar();
+        switch (c) {
+            case 'a':
+                auton_selector::btn0_cb();
+                break;
+            
+            case 's':
+                auton_selector::btn1_cb();
+                break;
+            
+            case 'd':
+                auton_selector::btn2_cb();
+                break;
+        }
     }
 }

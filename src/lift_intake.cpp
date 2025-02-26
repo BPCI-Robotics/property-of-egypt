@@ -33,8 +33,11 @@ void init(int color_to_reject) {
         static vision_signature_s_t blue_signature = Vision::signature_from_utility (1, -3775, -3259, -3517, 4809, 7525, 6167, 3.0, 0);
         vision.set_signature(1, &blue_signature);
     }
-    
 
+    Task task_loop {loop, nullptr, "color_sort::loop"};
+}
+
+void init() {
     Task task_loop {loop, nullptr, "color_sort::loop"};
 }
 
@@ -68,7 +71,6 @@ static void loop(void *) {
         while (motor.get_actual_velocity() > -200)
             delay(20);
 
-        spin(FORWARD);
         delay(250);
 
         spin(FORWARD);

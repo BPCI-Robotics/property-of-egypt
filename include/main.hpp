@@ -69,6 +69,7 @@ void opcontrol(void);
 /* Here I define all my namespaces. */
 
 namespace auton_selector {
+    void init(void (*enter_callback)(std::unordered_map<std::string, std::string>));
     void btn0_cb();
     void btn1_cb();
     void btn2_cb();
@@ -89,11 +90,19 @@ namespace wall_stake {
 #define REJECT_RED 1
 #define REJECT_BLUE 2
 
+enum class auton_direction { LEFT, RIGHT };
+
 namespace lift_intake {
     void init(int color_to_reject);
+    void init();
     void stop();
     void spin(int direction);
     
 } /* namespace color_sort */
+
+namespace auton {
+    void set_config(std::unordered_map<std::string, std::string> config);
+    void start();
+}
 
 using namespace pros;
