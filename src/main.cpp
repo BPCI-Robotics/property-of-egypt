@@ -69,12 +69,13 @@ lemlib::Chassis chassis(drivetrain,
                         sensors);
 
 void initialize() {
+    std::puts("Hello!");
     lcd::initialize();
-    chassis.calibrate();
+    // chassis.calibrate();
     chassis.setBrakeMode(MOTOR_BRAKE_COAST);
 
     Task screen_task([&]() {
-        while (true) {
+        while (false) {
             lemlib::Pose pose = chassis.getPose();
 
             lcd::print(4, "    X: %f", pose.x);
@@ -84,12 +85,9 @@ void initialize() {
             pros::delay(100);
         }
     });
-
+    
+    std::puts("Just before initialization!");
     auton_selector::init(auton::set_config);
-
-	lcd::register_btn0_cb(auton_selector::btn0_cb);
-    lcd::register_btn1_cb(auton_selector::btn1_cb);
-    lcd::register_btn2_cb(auton_selector::btn2_cb);
 }
 
 void disabled() {}

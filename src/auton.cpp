@@ -14,7 +14,7 @@ static void auton_elims() {
 
 static auton_direction config_auton_direction = auton_direction::LEFT;
 
-static void (*auton_routine)();
+static void (*auton_routine)() = auton_quals; 
 
 namespace auton {
     void set_config(std::unordered_map<std::string, std::string> config) {
