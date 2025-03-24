@@ -68,6 +68,7 @@ void opcontrol(void);
 
 /* Here I define all my namespaces. */
 
+#ifndef _IGNORE_OTHER_FILES
 namespace auton_selector {
     void init(void (*enter_callback)(std::unordered_map<std::string, std::string>));
     void btn0_cb();
@@ -104,5 +105,6 @@ namespace auton {
     void set_config(std::unordered_map<std::string, std::string> config);
     void start();
 }
+#endif /* ifndef _IGNORE_OTHER_FILES */
 
 using namespace pros;

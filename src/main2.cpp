@@ -1,7 +1,9 @@
+#define _IGNORE_OTHER_FILES
+
 #include "main.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
-#include "pros/screen.hpp"
 
+#if 0
 class Option {
 private:
     std::vector<std::string> choices;
@@ -40,81 +42,71 @@ private:
     std::vector<Option> options;
     bool disabled = false;
     void (*enter_callback)(std::unordered_map<std::string, std::string>) = nullptr;
-    
-    static void on_brain_screen_press() {
+        
+    std::unordered_map<std::string, std::string> get_all() {
+        if self.disabled:
+            return {};
+        
+        std::unordered_map<std::string, std::string> d = {};
 
+        for (auto Option& option : options)
+            d[option.name] = option.value();
+        
+        return d;
+    }
+    
+    void on_brain_screen_press() {
+        if (disabled)
+            return;
+
+        auto status = pros::screen_touch_status();
+
+        auto x = std::static_cast<int>(status.x);
+        auto y = std::static_cast<int>(status.y);
+
+        if (y < 140)
+            return;
+
+        // Integer division
+        options[x * count / 480].next();
+            
+        draw();
+
+        if (options[self.count - 1].value() == "ENTERED") {
+            enter_callback(get_all());
+            disabled = true;
+            return;
+        }
     }
 
-    public:
-    SelectionMenu() {
-        pros::screen::touch_callback(on_brain_screen_press);
+public:
+    void on_enter(void (*callback)(std::unordered_map<std::string, std::string>)) {
+        enter_callback = callback;
     }
-};
 
-#if 0
-class SelectionMenu:
-    def __init__(self):
-        self.count = 0
-        self.options: list[SelectionMenu._Option] = []
+    void force_submit() {
+        enter_callback(get_all());
+        disabled = true;
+        return;
+    }
 
-        self.disabled = False
-        self.enter_callback: Callable[[dict[str, Any]], None]
-
-        brain.screen.pressed(self._on_brain_screen_press)
-
-        self.add_option("Enter", Color.WHITE, ["", "Are you sure?", "ENTERED"])
-    
-    def on_enter(self, callback: Callable[[dict[str, Any]], None]):
-        self.enter_callback = callback
-
-    def add_option(self, name: str, color: Color | Color.DefinedColor, choices: list[Any]):
-        if self.disabled:
-            return
+    void add_option(std::string name, pros::Color color, std::vector<std::string> choices) {
+        if (disabled)
+            return;
         
-        self.options.insert(self.count - 1, SelectionMenu._Option(name, color, choices))
-        self.count += 1
-    
-    def _on_brain_screen_press(self):
-        if self.disabled:
-            return
-        
-        x = brain.screen.x_position()
-        y = brain.screen.y_position()
+        options.insert(options.end() - 1, Option(name, color, choices));
+        count += 1;
+    }
 
-        if y < 240 - 100:
-            return
-        
-        self.options[x * self.count // 480].next()
+    void draw() const {
+        if (disabled)
+            return;
 
-        self.draw()
+        pros::screen::set_eraser(black);
+        pros::screen::erase();
 
-        if self.options[self.count - 1].value() == "ENTERED":
-            self.enter_callback(self._get_all())
-            self.disabled = True
-            return
-    
-    def force_submit(self):
-            self.enter_callback(self._get_all())
-            self.disabled = True
-            return
-    
-    def _get_all(self) -> dict[str, Any]:
-        if self.disabled:
-            return {}
-        
-        d = {}
-        for option in self.options:
-            d[option.name] = option.value()
-        
-        return d
-
-    def draw(self):
-        if self.disabled:
-            return
-        
-        brain.screen.clear_screen(Color.BLACK)
-
-        # Print the configurations
+        // TODO: finish the code
+        /*
         brain.screen.set_font(FontType.MONO20)
 
         i = 0
@@ -142,15 +134,37 @@ class SelectionMenu:
                 option.color
             )
             i += 1
+        */
+    }
 
+    SelectionMenu() {
+        pros::screen::touch_callback([this](){on_brain_screen_press()}, E_TOUCH_PRESSED);
+
+        add_option("Enter", pros::Color::white, std::vector<std::string> {"", "Are you sure?", "ENTERED"});
+    }
+};
+#endif
+
+class WallStake {
+private:
+    pros::Motor motor;
+    pros::Rotation rotation;
+    
+    void init() {
+        motor.spin(pros::reverse);
+    }
+
+public:
+    WallStake(pros::Motor motor, pros::Rotation rotation) 
+        : motor(motor), rotation(rotation) {
+        
+        motor.set_brake_mode(pros::brake::hold);
+        init();
+    }
+}
+
+/*
 class WallStake:
-    def __init__(self, motor: Motor, rotation: Rotation):
-        self.motor = motor
-        self.rotation = rotation
-
-        self.motor.set_stopping(HOLD)
-        self.init()
-
     def spin_to(self, target, unit):
         time_spent = 0
         while abs(target - self.rotation.position(unit)) > 4 or time_spent > 1000:
@@ -768,4 +782,4 @@ auton = Auton()
 
 Competition(driver, auton)
 initialize()
-#endif
+*/
