@@ -151,17 +151,17 @@ private:
     pros::Rotation rotation;
     
     void init() {
-        motor.spin(pros::reverse);
+        // ;
     }
 
 public:
     WallStake(pros::Motor motor, pros::Rotation rotation) 
         : motor(motor), rotation(rotation) {
         
-        motor.set_brake_mode(pros::brake::hold);
+        motor.set_brake_mode(MOTOR_BRAKE_HOLD);
         init();
     }
-}
+};
 
 /*
 class WallStake:

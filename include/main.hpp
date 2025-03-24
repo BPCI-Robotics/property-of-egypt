@@ -57,54 +57,6 @@ void opcontrol(void);
 }
 #endif
 
-#ifdef __cplusplus
-/**
- * You can add C++-only headers here
- */
-//#include <iostream>
-#endif
-
 #endif  // _PROS_MAIN_H_
-
-/* Here I define all my namespaces. */
-
-#ifndef _IGNORE_OTHER_FILES
-namespace auton_selector {
-    void init(void (*enter_callback)(std::unordered_map<std::string, std::string>));
-    void btn0_cb();
-    void btn1_cb();
-    void btn2_cb();
-}
-
-namespace wall_stake {
-    void init();
-    void pickup();
-    void forward();
-    void reverse();
-    void stop();
-    void reset();
-}
-
-#define REVERSE -1
-#define FORWARD  1
-
-#define REJECT_RED 1
-#define REJECT_BLUE 2
-
-enum class auton_direction { LEFT, RIGHT };
-
-namespace lift_intake {
-    void init(int color_to_reject);
-    void init();
-    void stop();
-    void spin(int direction);
-    
-} /* namespace color_sort */
-
-namespace auton {
-    void set_config(std::unordered_map<std::string, std::string> config);
-    void start();
-}
-#endif /* ifndef _IGNORE_OTHER_FILES */
 
 using namespace pros;
