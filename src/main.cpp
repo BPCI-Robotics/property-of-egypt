@@ -1,55 +1,62 @@
-#define _IGNORE_OTHER_FILES
-
 #include "main.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
 
-#if 0
-class Option {
-private:
-    std::vector<std::string> choices;
-    unsigned index = 0;
-    unsigned count = 0;
+enum class MotorDirection {
+    REVERSE,
+    FORWARD
+};
 
-public:
-    std::string name;
-    pros::Color color;
-
-    Option (std::string name, pros::Color color, std::vector<std::string> choices)
-        : choices(choices), name(name), color(color) {
-        index = 0;
-        count = choices.size();
-    }
-
-    const std::string value() const {
-        return choices[index];
-    }
-
-    void next() {
-        index = (index + 1) % count;
-    }
-
-    void prev() {
-        if (index == 0)
-            index = count - 1;
-        else
-            index--;
-    }
+enum class AutonDirection {
+    LEFT,
+    RIGHT
 };
 
 class SelectionMenu {
 private:
+    class Option {
+    private:
+        std::vector<std::string> choices;
+        unsigned index = 0;
+        unsigned count = 0;
+    
+    public:
+        std::string name;
+        pros::Color color;
+    
+        Option (std::string name, pros::Color color, std::vector<std::string> choices)
+            : choices(choices), name(name), color(color) {
+            index = 0;
+            count = choices.size();
+        }
+    
+        const std::string value() const {
+            return choices[index];
+        }
+    
+        void next() {
+            index = (index + 1) % count;
+        }
+    
+        void prev() {
+            if (index == 0)
+                index = count - 1;
+            else
+                index--;
+        }
+    };
+
     unsigned count = 0;
     std::vector<Option> options;
     bool disabled = false;
     void (*enter_callback)(std::unordered_map<std::string, std::string>) = nullptr;
         
     std::unordered_map<std::string, std::string> get_all() {
-        if self.disabled:
+        if (disabled)
             return {};
         
         std::unordered_map<std::string, std::string> d = {};
 
-        for (auto Option& option : options)
+        for (const auto& option : options)
             d[option.name] = option.value();
         
         return d;
@@ -59,10 +66,10 @@ private:
         if (disabled)
             return;
 
-        auto status = pros::screen_touch_status();
+        auto status = pros::c::screen_touch_status();
 
-        auto x = std::static_cast<int>(status.x);
-        auto y = std::static_cast<int>(status.y);
+        auto x = static_cast<int>(status.x);
+        auto y = static_cast<int>(status.y);
 
         if (y < 140)
             return;
@@ -72,7 +79,7 @@ private:
             
         draw();
 
-        if (options[self.count - 1].value() == "ENTERED") {
+        if (options[count - 1].value() == "ENTERED") {
             enter_callback(get_all());
             disabled = true;
             return;
@@ -102,129 +109,124 @@ public:
         if (disabled)
             return;
 
-        pros::screen::set_eraser(black);
+        pros::screen::set_eraser(pros::Color::black);
         pros::screen::erase();
 
-        // TODO: finish the code
-        /*
-        brain.screen.set_font(FontType.MONO20)
+        /* Insha Allah this will not cause a segmentation fault */
+        for (unsigned i = 0; i < count; i++) {
+            pros::screen::set_pen(options[i].color);
+            pros::screen::print(pros::E_TEXT_MEDIUM, static_cast<int16_t>(i + 1), "%s: %s", options[i].name, options[i].value());
+        }
+        
+        constexpr int canvas_width = 480;
+        constexpr int canvas_height = 480;
 
-        i = 0
-        for option in self.options:
-            brain.screen.set_pen_color(option.color)
-            brain.screen.set_cursor(i + 1, 1)
-            brain.screen.print(option.name + ": " + str(option.value()))
+        int rect_width = (canvas_width - 10 * (count + 1)) / count;
+        constexpr int rect_height = 70;
 
-            i += 1
+        for (unsigned i = 0; i < count; i++) {
+            pros::screen::set_pen(options[i].color);
+            
+            int16_t x0 = 10 + (10 + rect_width) * i;
+            int16_t y0 = canvas_height - (rect_height * 5);
 
-        canvas_width = 480
-        canvas_height = 240
-
-        rect_width = (canvas_width - 10 * (self.count + 1)) / self.count
-        rect_height = 70
-
-        i = 0
-        for option in self.options:
-            brain.screen.set_pen_color(option.color)
-            brain.screen.draw_rectangle(
-                10 + (10 + rect_width) * i, 
-                canvas_height - (rect_height + 5),
-                rect_width,
-                rect_height,
-                option.color
-            )
-            i += 1
-        */
+            pros::screen::draw_rect(
+                x0,
+                y0,
+                x0 + rect_width,
+                y0 + rect_height
+            );
+        }
     }
 
     SelectionMenu() {
-        pros::screen::touch_callback([this](){on_brain_screen_press()}, E_TOUCH_PRESSED);
+        pros::screen::touch_callback([](){return;}, E_TOUCH_PRESSED);
 
         add_option("Enter", pros::Color::white, std::vector<std::string> {"", "Are you sure?", "ENTERED"});
     }
 };
-#endif
 
 class WallStake {
 private:
     pros::Motor motor;
     pros::Rotation rotation;
     
-    void init() {
-        // ;
+    void init() const {
+        spin(MotorDirection::REVERSE);
+        pros::delay(800);
+        rotation.reset_position();
+        stop();
     }
 
 public:
-    WallStake(pros::Motor motor, pros::Rotation rotation) 
+    WallStake(const pros::Motor& motor, const pros::Rotation& rotation) 
         : motor(motor), rotation(rotation) {
         
         motor.set_brake_mode(MOTOR_BRAKE_HOLD);
         init();
     }
+
+    /*
+    You can call this function two ways:
+    `wall_stake.spin(MotorDirection::FORWARD);`
+    `wall_stake.spin(MotorDirection::REVERSE);`
+    */
+    void spin(MotorDirection direction) const {
+        switch (direction) {
+            case MotorDirection::REVERSE:
+                motor.move(-127 * 6 / 10);
+                break;
+
+            case MotorDirection::FORWARD:
+                motor.move(127 * 6 / 10);
+                break;
+        }
+    }
+
+    /*
+    Only one call:
+    `wall_stake.stop();`
+    */
+    void stop() const {
+        motor.move(0);
+    }
+
+    void spin_to(int degrees) const {
+        int time_spent = 0;
+
+        int position = rotation.get_position() / 100;
+
+        while (abs(degrees - position) > 4 || time_spent > 1000) {
+            position = rotation.get_position() / 100;
+
+            if (degrees > position)
+                spin(MotorDirection::FORWARD);
+
+            if (degrees < position)
+                spin(MotorDirection::REVERSE);
+
+            pros::delay(20);
+            time_spent += 20;
+        }
+        stop();
+    }
+
+    void pickup() const { spin_to(36); }
+    void score() const { spin_to(192); }
+    void reset() const { spin_to(0); }
 };
 
+class LiftIntake {
+private:
+    pros::Motor motor;
+    pros::Vision vision;
+
+public:
+    LiftIntake(const pros::Motor& motor, const pros::Vision& vision)
+        : motor(motor), vision(vision) { }
+}
+
 /*
-class WallStake:
-    def spin_to(self, target, unit):
-        time_spent = 0
-        while abs(target - self.rotation.position(unit)) > 4 or time_spent > 1000:
-            if target > self.rotation.position(unit):
-                self.motor.spin(FORWARD, 60, PERCENT)
-            
-            if target < self.rotation.position(unit):
-                self.motor.spin(REVERSE, 60, PERCENT)
-
-            wait(20, MSEC)
-            time_spent += 20
-        
-        self.motor.stop()
-    
-    def init(self):
-        self.spin(REVERSE) 
-        wait(800, MSEC)
-        self.rotation.reset_position()
-        self.stop()
-
-    def print_pos(self):
-        while True:
-            wait(200, MSEC)
-            brain.screen.clear_screen()
-            brain.screen.set_cursor(1, 1)
-            brain.screen.print("Intake temp:", lift_intake.motor.temperature())
-            brain.screen.set_cursor(2, 1)
-            brain.screen.print("Wall stake temp:", wall_stake.motor.temperature())
-            brain.screen.set_cursor(3, 1)
-            brain.screen.print("Drivetrain temp:", drivetrain.temperature())
-
-    def start_log(self):
-        Thread(self.print_pos)
-
-    def pickup(self):
-        self.spin_to(36, DEGREES)
-
-    def score(self):
-        self.spin_to(192.48, DEGREES)
-
-    def reset(self):
-        self.spin_to(0, DEGREES)
-            
-    def spin(self, direction):
-        self.motor.spin(direction, 60, PERCENT)
-
-    def stop(self):
-        self.motor.stop()
-
-# TODO: Clean up the starting and stopping of the loop.
-# TODO: Debug why it doesn't reverse.
-
-# Notes
-
-# 4 possible places where color sort is failing (X means this reason is crossed out)
-# 1: not detecting enemy signature properly (most likely)
-# 2: logic for limit switch is off 
-# 3: the loop isn't reset, as in once an enemy donut is detected
-# 4: driver input might be interfering with it 
-
 class LiftIntake:
     def __init__(self, motor: Motor, vision: Vision):
         self.motor = motor
@@ -241,62 +243,6 @@ class LiftIntake:
 
     def stop(self):
         self.motor.stop()
-
-# COMPLETED
-class DigitalOutToggleable(DigitalOut):
-    def __init__(self, port, default_state=False):
-        super().__init__(port)
-
-        self.state = default_state
-
-    def toggle(self):
-        self.state = not self.state
-        self.set(self.state)
-
-class AutonControl:
-
-    class _PID_Basic:
-        def __init__(self, PID: tuple[float, float, float]):
-            self.Kp = PID[0]
-            self.Ki = PID[1]
-            self.Kd = PID[2]
-
-            self.time_prev = 0
-            self.e_prev = 0
-
-        def __call__(self, current: float, target: float) -> float:
-            
-            self.target = target
-            self.current = current
-            return self._do_calculation()
-
-        def _do_calculation(self) -> float:
-
-            Kp = self.Kp
-            Ki = self.Ki
-            Kd = self.Kd
-            I = 0
-
-            t = brain.timer.time(MSEC) / 1000
-            dt = t - self.time_prev
-
-            e = self.target - self.current
-            de = e - self.e_prev
-
-            P = Kp * e
-            I += Ki * e*dt
-            D = Kd * de/dt
-
-            MV = P + I + D
-
-            self.e_prev = e
-            self.time_prev = t
-
-            return self.current + MV
-    
-    def __init__(self, drivetrain: SmartDrive, inertial: Inertial, PID: tuple[float, float, float]):
-        self.drivetrain = drivetrain
-        self.inertial = inertial
 
 class Auton:
     def __init__(self):
@@ -782,4 +728,18 @@ auton = Auton()
 
 Competition(driver, auton)
 initialize()
+
+    def print_pos(self):
+        while True:
+            wait(200, MSEC)
+            brain.screen.clear_screen()
+            brain.screen.set_cursor(1, 1)
+            brain.screen.print("Intake temp:", lift_intake.motor.temperature())
+            brain.screen.set_cursor(2, 1)
+            brain.screen.print("Wall stake temp:", wall_stake.motor.temperature())
+            brain.screen.set_cursor(3, 1)
+            brain.screen.print("Drivetrain temp:", drivetrain.temperature())
+
+    def start_log(self):
+        Thread(self.print_pos)
 */
