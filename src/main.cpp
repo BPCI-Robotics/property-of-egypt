@@ -1,5 +1,7 @@
 #include "main.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+#include "pros/colors.hpp"
+#include "pros/rtos.hpp"
 
 enum class MotorDirection {
     REVERSE,
@@ -219,12 +221,31 @@ public:
 class LiftIntake {
 private:
     pros::Motor motor;
-    pros::Vision vision;
+    pros::Optical optical;
+    pros::Color enemy_color;
 
 public:
-    LiftIntake(const pros::Motor& motor, const pros::Vision& vision)
-        : motor(motor), vision(vision) { }
-}
+    LiftIntake(const pros::Motor& motor, const pros::Optical& optical)
+        : motor(motor), optical(optical) { 
+        this->motor.set_brake_mode(MOTOR_BRAKE_BRAKE);
+    }
+
+    void start_sorting() const {
+        pros::Task {[]() {
+            while (true) {
+                pros::delay(20);
+
+                // ???? optical
+            }
+        }, "Color sorting task"};
+    }
+
+    void start_sorting(pros::Color enemy_color) {
+        this->enemy_color = enemy_color;
+
+
+    }
+};
 
 /*
 class LiftIntake:
