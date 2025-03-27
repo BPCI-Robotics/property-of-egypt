@@ -1,5 +1,6 @@
 #include "main.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+#include "pros/adi.hpp"
 #include "pros/colors.hpp"
 #include "pros/rtos.hpp"
 
@@ -121,7 +122,7 @@ public:
         }
         
         constexpr int canvas_width = 480;
-        constexpr int canvas_height = 480;
+        constexpr int canvas_height = 240;
 
         int rect_width = (canvas_width - 10 * (count + 1)) / count;
         constexpr int rect_height = 70;
@@ -233,7 +234,7 @@ public:
             while (true) {
                 pros::delay(20);
 
-                #warn Fix this please
+                /* TODO: Write that */
             }
         }, "Color sorting task"};
     }
@@ -263,11 +264,61 @@ public:
 using namespace pros;
 using namespace pros::v5;
 
-SelectionMenu menu {};
 WallStake wall_stake (Motor (-8, MotorGears::red, MotorEncoderUnits::degrees), 
-                      Rotation ("add the port here"));
+                      Rotation (11));
 
-LiftIntake lift_intake (Motor(7, MotorGears::blue, MotorEncoderUnits::degrees), Optical(9))
+Controller controller(CONTROLLER_MASTER);
+
+adi::Pneumatics stake_grab ('a', false);
+adi::Pneumatics doink_piston ('b', false);
+
+LiftIntake lift_intake (Motor(7, MotorGears::blue, MotorEncoderUnits::degrees), Optical(9));
+
+MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
+MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
+
+SelectionMenu menu {};
+
+// drivetrain settings
+lemlib::Drivetrain drivetrain(&left_motors,
+                              &right_motors,
+                              10, // TODO: set track width (inches)
+                              lemlib::Omniwheel::NEW_325,
+                              360,
+                              2 // higher = faster, less accurate
+);
+
+// lateral PID controller
+lemlib::ControllerSettings lateral_controller( 10, // proportional gain (kP)
+                                                0, // integral gain (kI)
+                                                3, // derivative gain (kD)
+                                                3, // anti windup
+                                                1, // small error range, in inches
+                                              100, // small error range timeout, in milliseconds
+                                                3, // large error range, in inches
+                                              500, // large error range timeout, in milliseconds
+                                               20  // maximum acceleration (slew)
+);
+
+// angular PID controller
+lemlib::ControllerSettings angular_controller(  2, // proportional gain (kP)
+                                                0, // integral gain (kI)
+                                               10, // derivative gain (kD)
+                                                3, // anti windup
+                                                1, // small error range, in degrees
+                                              100, // small error range timeout, in milliseconds
+                                                3, // large error range, in degrees
+                                              500, // large error range timeout, in milliseconds
+                                                0  // maximum acceleration (slew)
+);
+
+v5::Imu imu(10);
+lemlib::OdomSensors sensors(nullptr, nullptr, nullptr, nullptr, &imu);
+
+lemlib::Chassis chassis(drivetrain, 
+                        lateral_controller, 
+                        angular_controller, 
+                        sensors);
 
 /*
 
@@ -283,352 +334,22 @@ class Auton:
 
     def _quals(self):
         if self.color == RED_SIG:
-            #run ring rush with alliance stake scoring
-            drivetrain.drive_for(FORWARD, 50, INCHES, 60, PERCENT, wait=True)
-            drivetrain.drive_for(FORWARD, 2, INCHES, 60, PERCENT, True)
-            #drivetrain.drive_for
-
-            wait(1, SECONDS)
-
-            drivetrain.drive_for(FORWARD, 5, INCHES, 90, PERCENT, True)
-            drivetrain.drive_for(FORWARD, 5, INCHES, 90, PERCENT)
-            wall_stake.reset()
-
-            drivetrain.turn_for(LEFT, 55, DEGREES, 80, PERCENT)
-
-            drivetrain.drive_for(REVERSE, 55, INCHES, 90, PERCENT)
-            drivetrain.drive_for(FORWARD, 5, INCHES, 80, PERCENT)
-            stake_grabber.toggle()
-
-            wait(0.2, SECONDS)
-
-            drivetrain.turn_for(RIGHT, 120, DEGREES, 85, PERCENT)
-
-            lift_intake.spin(FORWARD)
-
-            drivetrain.drive_for(FORWARD, 34, INCHES, 90, PERCENT)
-            drivetrain.drive_for(REVERSE, 5, INCHES, 80, PERCENT)
-            #after testing, we can add the above two lines again to pick up a third donut onto the stake
-
-            drivetrain.turn_for(RIGHT, 90, DEGREES, 80, PERCENT)
-
-            drivetrain.drive_for(FORWARD, 30, INCHES, 90, PERCENT)
-            drivetrain.drive_for(REVERSE, 5, INCHES, 80, PERCENT)
-
-            #check the time - if we don't have much time left, then just hit ladder
-            drivetrain.turn_for(RIGHT, 90, DEGREES, 85, PERCENT)
-            drivetrain.drive_for(FORWARD, 60, INCHES, 90, PERCENT)
-
-            #check the time - if we have time left, then the following code will apply
-
-            #drivetrain.turn_for(LEFT, 90, DEGREES, 75, PERCENT)
-
-            #drivetrain.drive_for(FORWARD, 51, INCHES, 90, PERCENT)
-            
-            #doink_piston.toggle()
-            #drivetrain.drive_for(FORWARD, 10, INCHES, 80, PERCENT)
-            #drivetrain.turn_for(LEFT, 70, DEGREES, 90, PERCENT)
-
-        """elif self.color == BLUE_SIG:
-            #ts for goal rush
-            drivetrain.drive_for(REVERSE, 40, INCHES, 85, PERCENT)
-            drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT)
-            stake_grabber.toggle()
-
-            wait(0.3, SECONDS)
-            #score the preload
-            lift_intake.motor.spin_for(REVERSE, 2, TURNS)
-            lift_intake.motor.spin_for(REVERSE, 1, TURNS)
-            drivetrain.turn_for(LEFT, 90, DEGREES, 80, PERCENT)
-
-            lift_intake.spin(FORWARD)
-
-            drivetrain.drive_for(FORWARD, 35, INCHES, 90, PERCENT)
-            wait(0.5, SECONDS)
-            drivetrain.drive_for(REVERSE, 5, INCHES, 80, PERCENT)
-
-            drivetrain.turn_for(RIGHT, 90, DEGREES, 85, PERCENT)
-            drivetrain.drive_for(FORWARD, 12, INCHES, 90, PERCENT)
-
-            drivetrain.turn_for(LEFT, 90, DEGREES, 85, PERCENT)
-            drivetrain.drive_for(FORWARD, 18, INCHES, 90, PERCENT)
-
-            drivetrain.turn_for(RIGHT, 90, DEGREES, 85, PERCENT)
-
-            drivetrain.drive_for(FORWARD, 60, INCHES, 90, PERCENT)
-            
-            #clear corner
-            doink_piston.toggle()
-            drivetrain.drive_for(FORWARD, 10, INCHES, 80, PERCENT)
-            drivetrain.turn_for(RIGHT, 116.6, DEGREES, 90, PERCENT)"""
+        elif self.color == BLUE_SIG:
 
     def _elims(self):
         drivetrain.set_timeout(5, SECONDS)
         if self.color == RED_SIG:
             if self.mode == "Ring":
-                #its ring rush time
-                #RED 
-                #without alliance stake
-                drivetrain.drive_for(REVERSE, 60, INCHES, 85, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT)
-                stake_grabber.toggle()
-
-                wait(0.3, SECONDS)
-                #score the preload
-                lift_intake.motor.spin_for(REVERSE, 3, TURNS, 100, PERCENT)
-                lift_intake.motor.spin_for(REVERSE, 1, TURNS, 100, PERCENT)
-
-                drivetrain.turn_for(LEFT, 105, DEGREES, 80, PERCENT)
-
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 46, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT, wait=True)
-
-                drivetrain.turn_for(LEFT, 63, DEGREES, 85, PERCENT, wait=True)
-
-                #just to make sure that the lift intake spins properly
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 47, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(FORWARD, 7, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT)
-
-                #drivetrain.turn_for(RIGHT, 62, DEGREES, 85, PERCENT, wait=True)
-                #drivetrain.drive_for(FORWARD, 18, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT, wait=True)
-
-                drivetrain.stop()
-                
-                wait(4, SECONDS)
-
             elif self.mode == "Goal":
-                #its goal rush time
-                #BLUE 
-                #without alliance stake
-                drivetrain.drive_for(REVERSE, 60, INCHES, 85, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT)
-                stake_grabber.toggle()
-
-                wait(0.3, SECONDS)
-                #score the preload
-                lift_intake.motor.spin_for(REVERSE, 3, TURNS, 100, PERCENT)
-                lift_intake.motor.spin_for(REVERSE, 1, TURNS, 100, PERCENT)
-
-                drivetrain.turn_for(RIGHT, 105, DEGREES, 80, PERCENT)
-
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 46, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT, wait=True)
-
-                drivetrain.turn_for(RIGHT, 63, DEGREES, 85, PERCENT, wait=True)
-
-                #just to make sure that the lift intake spins properly
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 47, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(FORWARD, 7, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT)
-
-                #drivetrain.turn_for(RIGHT, 62, DEGREES, 85, PERCENT, wait=True)
-                #drivetrain.drive_for(FORWARD, 18, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT, wait=True)
-
-                drivetrain.stop()
-                lift_intake.motor.stop(BRAKE)
 
         elif self.color == BLUE_SIG:
             if self.mode == "Ring":
-                #its ring rush time
-                #BLUE 
-                #without alliance stake
-                drivetrain.drive_for(REVERSE, 60, INCHES, 85, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT)
-                stake_grabber.toggle()
-
-                wait(0.3, SECONDS)
-                #score the preload
-                lift_intake.motor.spin_for(REVERSE, 3, TURNS, 90, PERCENT)
-                lift_intake.motor.spin_for(REVERSE, 1, TURNS, 90, PERCENT)
-                if lift_intake.motor.velocity() == 0:
-                    lift_intake.motor.spin_for(FORWARD, 1,  TURNS, 80, PERCENT, wait=True)
-
-                    lift_intake.motor.spin(REVERSE, 100, PERCENT)
-    
-                drivetrain.turn_for(RIGHT, 105, DEGREES, 80, PERCENT)
-
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 49, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT, wait=True)
-
-                drivetrain.turn_for(RIGHT, 63, DEGREES, 85, PERCENT, wait=True)
-
-                #just to make sure that the lift intake spins properly
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 45, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(FORWARD, 6, INCHES, 80, PERCENT, wait=True)
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-                drivetrain.drive_for(REVERSE, 7, INCHES, 90, PERCENT, wait=True) 
-
-                wait(4, SECONDS)
-
-                #drivetrain.turn_for(LEFT, 62, DEGREES, 85, PERCENT, wait=True)
-                #drivetrain.drive_for(FORWARD, 18, INCHES, 80, PERCENT, wait=True)
-                #drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT, wait=True)
-
-                #no more moving 
-                drivetrain.stop()
-                lift_intake.motor.stop(BRAKE)
-
-                #smash into ladder time 
-                #drivetrain.turn_for(LEFT, 180, DEGREES, 85, PERCENT, wait=True)
-                #drivetrain.drive_for(FORWARD, 56, INCHES, 95, PERCENT)
 
             elif self.mode == "Goal":
-                #its goal rush time
-                #BLUE 
-                #without alliance stake
-                drivetrain.drive_for(REVERSE, 60, INCHES, 85, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT)
-                stake_grabber.toggle()
-
-
-                wait(0.3, SECONDS)
-                #score the preload
-                lift_intake.motor.spin_for(REVERSE, 3, TURNS, 100, PERCENT)
-                lift_intake.motor.spin_for(REVERSE, 1, TURNS, 100, PERCENT)
-
-                drivetrain.turn_for(LEFT, 105, DEGREES, 80, PERCENT)
-
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 46, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT, wait=True)
-
-                drivetrain.turn_for(LEFT, 63, DEGREES, 85, PERCENT, wait=True)
-
-                #just to make sure that the lift intake spins properly
-                lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-                drivetrain.drive_for(FORWARD, 47, INCHES, 90, PERCENT, wait=True)
-                drivetrain.drive_for(FORWARD, 7, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 6, INCHES, 90, PERCENT)
-
-                #drivetrain.turn_for(RIGHT, 62, DEGREES, 85, PERCENT, wait=True)
-                #drivetrain.drive_for(FORWARD, 18, INCHES, 80, PERCENT, wait=True)
-                drivetrain.drive_for(REVERSE, 5, INCHES, 85, PERCENT, wait=True)
-
-                drivetrain.stop()
-                lift_intake.motor.stop(BRAKE)
-                     
-        //#elif self.direction == RIGHT:
             
-
-            
-
     def _skills(self):
-        #initial_time = brain.timer.time(MSEC)
-        wall_stake.motor.spin(FORWARD, 90, PERCENT)
-        wait(1, SECONDS)
-        drivetrain.drive_for(REVERSE, 14, INCHES, 95, PERCENT)
-        wall_stake.motor.spin(REVERSE, 90, PERCENT)
-        wait(0.9, SECONDS)
-
-        wall_stake.motor.stop(BRAKE)
-
-        drivetrain.drive_for(FORWARD, 8, INCHES, 95, PERCENT)
-
-        drivetrain.turn_for(RIGHT, 80, DEGREES, 90, PERCENT)
-
-        drivetrain.drive_for(REVERSE, 66, INCHES, 95, PERCENT)
-        drivetrain.drive_for(REVERSE, 4, INCHES, 95, PERCENT, wait=False)
-        stake_grabber.toggle()
-
-        wait(1, SECONDS)
-
-        drivetrain.turn_for(RIGHT, 107, DEGREES, 90, PERCENT)
-
-        lift_intake.spin(REVERSE)
-
-        drivetrain.drive_for(FORWARD, 65, INCHES, 100, PERCENT)
-
-        drivetrain.turn_for(RIGHT, 85, DEGREES, 90, PERCENT)
-
-        drivetrain.drive_for(FORWARD, 62, INCHES, 95, PERCENT)
-
-        drivetrain.turn_for(RIGHT, 85, DEGREES, 90, PERCENT)
-        
-        drivetrain.drive_for(FORWARD, 74, INCHES, 100, PERCENT)
-        
-
-
-        """#which direction
-        drivetrain.drive_for(REVERSE, 62, INCHES, 95, PERCENT, wait=True)
-        drivetrain.drive_for(REVERSE, 3, INCHES, 95, PERCENT, wait=False)
-        stake_grabber.toggle()
-
-        wait(0.2, SECONDS)
-        #score the preload
-        lift_intake.motor.spin_for(REVERSE, 3, TURNS, 100, PERCENT)
-        lift_intake.motor.spin_for(REVERSE, 1, TURNS, 100, PERCENT)
-
-        drivetrain.turn_for(LEFT, 210, DEGREES, 90, PERCENT)
-
-        lift_intake.motor.spin(REVERSE, 100, PERCENT, wait=False)
-
-        drivetrain.drive_for(FORWARD, 60, INCHES, 95, PERCENT, wait=True)
-        wait(0.7, SECONDS)
- 
-        drivetrain.turn_for(LEFT, 105, DEGREES, 90, PERCENT, wait=True)
-
-        #just to make sure that the lift intake spins properly
-        lift_intake.motor.spin(REVERSE, 100, PERCENT, wait=False)
-
-        drivetrain.drive_for(FORWARD, 60, INCHES, 95, PERCENT, wait=True)
-        wait(0.7, SECONDS)
-
-        drivetrain.turn_for(LEFT, 105, DEGREES, 90, PERCENT, wait=True)
-
-        lift_intake.motor.spin(REVERSE, 100, PERCENT)
-
-        drivetrain.drive_for(FORWARD, 78, INCHES, 95, PERCENT, wait=True)
-        wait(0.3, SECONDS)
-
-        drivetrain.turn_for(LEFT, 305, DEGREES, 90, PERCENT, wait=True)
-        drivetrain.drive_for(REVERSE, 60, INCHES, wait=True)
-
-        #ungrab the stake to put into corner
-        stake_grabber.toggle()
-        wait(0.8, SECONDS)
-
-        drivetrain.drive_for(FORWARD, 60, INCHES, 95, PERCENT, wait=True)
-
-        drivetrain.turn_for(RIGHT, 60, DEGREES, 90, PERCENT, wait=True)
-
-        drivetrain.drive_for(REVERSE, 120, INCHES, 95, PERCENT, wait = True)
-        drivetrain.drive_for(REVERSE, 5, INCHES, 95, PERCENT, wait=False)
-        
-        #to grab second mobile goal
-        stake_grabber.toggle()
-        
-        wait(0.8, SECONDS)
-
-        drivetrain.drive_for(FORWARD, 60, INCHES, 95, PERCENT)
-        drivetrain.turn_for(RIGHT, 158, DEGREES, 90, PERCENT, wait=True)
-
-        drivetrain.drive_for(FORWARD, 87, INCHES, 95, PERCENT)
-        drivetrain.turn_for(RIGHT, 50, DEGREES, 90, PERCENT)
-        drivetrain.drive_for(FORWARD, 15, INCHES, 95, PERCENT)
-
-        drivetrain.turn_for(RIGHT, 305, DEGREES, 90, PERCENT)
-        drivetrain.drive_for(REVERSE, 70, INCHES, 95, PERCENT)"""
-
 
     def set_config(self, config: dict[str, Any]):
-        print(config)
 
         if config["Team color"] == "Red":
             self.color = RED_SIG
@@ -690,13 +411,6 @@ drivetrain= SmartDrive(
                 MM,     # unit
                 600/360
             )
-
-lift_intake = LiftIntake(
-    Motor(Ports.PORT7, GearSetting.RATIO_6_1, True), 
-    Vision(Ports.PORT9, 50, BLUE_SIG, RED_SIG), 
-)
-
-wall_stake = WallStake(Motor(Ports.PORT8, GearSetting.RATIO_36_1, True), Rotation(Ports.PORT11))
 
 #endregion Parts
 
