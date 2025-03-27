@@ -142,8 +142,6 @@ public:
     }
 
     SelectionMenu() {
-        pros::screen::touch_callback([](){return;}, E_TOUCH_PRESSED);
-
         add_option("Enter", pros::Color::white, std::vector<std::string> {"", "Are you sure?", "ENTERED"});
     }
 };
@@ -175,13 +173,13 @@ public:
     */
     void spin(MotorDirection direction) const {
         switch (direction) {
-            case MotorDirection::REVERSE:
-                motor.move(-127 * 6 / 10);
-                break;
+        case MotorDirection::REVERSE:
+            motor.move(-127 * 6 / 10);
+            break;
 
-            case MotorDirection::FORWARD:
-                motor.move(127 * 6 / 10);
-                break;
+        case MotorDirection::FORWARD:
+            motor.move(127 * 6 / 10);
+            break;
         }
     }
 
@@ -235,35 +233,43 @@ public:
             while (true) {
                 pros::delay(20);
 
-                // ???? optical
+                #warn Fix this please
             }
         }, "Color sorting task"};
     }
 
     void start_sorting(pros::Color enemy_color) {
         this->enemy_color = enemy_color;
+        start_sorting();
+    }
 
+    void spin(MotorDirection direction) const {
+        switch (direction) {
+        case MotorDirection::REVERSE:
+            motor.move(-127);
+            break;
 
+        case MotorDirection::FORWARD:
+            motor.move(127);
+            break;
+        }
+    }
+
+    void stop() const {
+        motor.brake();
     }
 };
 
+using namespace pros;
+using namespace pros::v5;
+
+SelectionMenu menu {};
+WallStake wall_stake (Motor (-8, MotorGears::red, MotorEncoderUnits::degrees), 
+                      Rotation ("add the port here"));
+
+LiftIntake lift_intake (Motor(7, MotorGears::blue, MotorEncoderUnits::degrees), Optical(9))
+
 /*
-class LiftIntake:
-    def __init__(self, motor: Motor, vision: Vision):
-        self.motor = motor
-        self.vision = vision
-        self.enemy_sig = None
-
-        self.motor.set_stopping(BRAKE)
-    
-    def set_enemy_sig(self, enemy_sig):
-        self.enemy_sig = enemy_sig
-
-    def spin(self, direction: DirectionType.DirectionType):
-        self.motor.spin(direction, 100, PERCENT)
-
-    def stop(self):
-        self.motor.stop()
 
 class Auton:
     def __init__(self):
