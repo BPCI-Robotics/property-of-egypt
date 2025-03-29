@@ -1,10 +1,5 @@
 #include "main.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
-#include "pros/adi.hpp"
-#include "pros/colors.hpp"
-#include "pros/rtos.hpp"
-#include "pros/screen.h"
-#include "pros/screen.hpp"
 
 enum class MotorDirection {
     REVERSE,
@@ -68,7 +63,7 @@ private:
     }
 
 public:
-    void internal_touch_handler() {
+    void touch_callback() {
         if (disabled)
             return;
 
@@ -323,7 +318,7 @@ lemlib::Chassis chassis(drivetrain,
                         sensors);
 
 void menu_touch_callback() {
-    menu.internal_touch_handler();
+    menu.touch_callback();
 }
 
 void initialize() {
