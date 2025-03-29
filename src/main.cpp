@@ -3,6 +3,8 @@
 #include "pros/adi.hpp"
 #include "pros/colors.hpp"
 #include "pros/rtos.hpp"
+#include "pros/screen.h"
+#include "pros/screen.hpp"
 
 enum class MotorDirection {
     REVERSE,
@@ -64,8 +66,9 @@ private:
         
         return d;
     }
-    
-    void on_brain_screen_press() {
+
+public:
+    void internal_touch_handler() {
         if (disabled)
             return;
 
@@ -89,7 +92,6 @@ private:
         }
     }
 
-public:
     void on_enter(void (*callback)(std::unordered_map<std::string, std::string>)) {
         enter_callback = callback;
     }
@@ -269,6 +271,8 @@ WallStake wall_stake (Motor (-8, MotorGears::red, MotorEncoderUnits::degrees),
 
 Controller controller(CONTROLLER_MASTER);
 
+SelectionMenu menu {};
+
 adi::Pneumatics stake_grab ('a', false);
 adi::Pneumatics doink_piston ('b', false);
 
@@ -276,8 +280,6 @@ LiftIntake lift_intake (Motor(7, MotorGears::blue, MotorEncoderUnits::degrees), 
 
 MotorGroup left_motors ({1, -2, 3}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
 MotorGroup right_motors ({-4, 5, -6}, v5::MotorGears::blue, v5::MotorEncoderUnits::degrees);
-
-SelectionMenu menu {};
 
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&left_motors,
@@ -319,6 +321,14 @@ lemlib::Chassis chassis(drivetrain,
                         lateral_controller, 
                         angular_controller, 
                         sensors);
+
+void menu_touch_callback() {
+    menu.internal_touch_handler();
+}
+
+void initialize() {
+    pros::screen::touch_callback(menu_touch_callback, TOUCH_PRESSED);
+}
 
 /*
 
