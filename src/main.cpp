@@ -11,6 +11,12 @@ enum class AutonDirection {
     RIGHT
 };
 
+enum class TeamColor {
+    RED,
+    BLUE,
+    UNSET
+};
+
 class SelectionMenu {
 private:
     class Option {
@@ -212,35 +218,33 @@ public:
     void pickup() const { spin_to(36); }
     void score() const { spin_to(192); }
     void reset() const { spin_to(0); }
+    auto temperature() const { return motor.get_temperature(); }
 };
 
 class LiftIntake {
 private:
     pros::Motor motor;
-    pros::Optical optical;
-    pros::Color enemy_color;
+    pros::Optical optical {7};
+    TeamColor enemy_color = TeamColor::UNSET;
+
+    void reject() const {
+        pros::delay(100);
+        spin(MotorDirection::REVERSE);
+        std::cout << "Gooned!";
+        pros::delay(750);
+        std::cout << "Finished gooning!";
+        spin(MotorDirection::FORWARD);
+    }
 
 public:
     LiftIntake(const pros::Motor& motor, const pros::Optical& optical)
         : motor(motor), optical(optical) { 
         this->motor.set_brake_mode(MOTOR_BRAKE_BRAKE);
     }
-
-    void start_sorting() const {
-        pros::Task {[]() {
-            while (true) {
-                pros::delay(20);
-
-                /* TODO: Write that */
-            }
-        }, "Color sorting task"};
-    }
-
-    void start_sorting(pros::Color enemy_color) {
-        this->enemy_color = enemy_color;
-        start_sorting();
-    }
-
+    /*
+    lift_intake.spin(MotorDirection::REVERSE);
+    lift_intake.spin(MotorDirection::FORWARD);
+    */
     void spin(MotorDirection direction) const {
         switch (direction) {
         case MotorDirection::REVERSE:
@@ -253,9 +257,49 @@ public:
         }
     }
 
+    /* lift_intake.stop() */
     void stop() const {
         motor.brake();
     }
+
+    /* When a color isn't given, it simply sorts with the last color given. */
+    void start_sorting() {
+        pros::Task {[this]() {
+            while (true) {
+                pros::delay(20);
+
+                /* https://kb.vex.com/hc/article_attachments/360074778111 */
+                double hue = optical.get_hue();
+
+                switch (enemy_color) {
+                case TeamColor::RED:
+                    if ((330.0 < hue) || (hue < 30.0)) reject();
+                    break;
+                
+                case TeamColor::BLUE:
+                    if ((210.0 < hue) && (hue < 270.0)) reject();
+                    break;
+                
+                case TeamColor::UNSET:
+                    std::cout << "LiftIntake: You forgot to set a team color for color sort." << std::endl;
+                    return;
+                }
+            }
+        }, "LiftIntake: Color sorting task"};
+    }
+
+    /* 
+    When a color is given, it starts sorting with the given color. 
+    lift_intake.start_sorting(TeamColor::RED);
+    lift_intake.start_sorting(TeamColor::BLUE);
+    lift_intake.start_sorting();
+    */
+    void start_sorting(TeamColor enemy_color) {
+        this->enemy_color = enemy_color;
+        start_sorting();
+    }
+
+    auto temperature() const { return motor.get_temperature(); }
 };
 
 using namespace pros;
@@ -268,7 +312,7 @@ Controller controller(CONTROLLER_MASTER);
 
 SelectionMenu menu {};
 
-adi::Pneumatics stake_grab ('a', false);
+adi::Pneumatics stake_grabber ('a', false);
 adi::Pneumatics doink_piston ('b', false);
 
 LiftIntake lift_intake (Motor(7, MotorGears::blue, MotorEncoderUnits::degrees), Optical(9));
@@ -281,7 +325,7 @@ lemlib::Drivetrain drivetrain(&left_motors,
                               &right_motors,
                               10, // TODO: set track width (inches)
                               lemlib::Omniwheel::NEW_325,
-                              360,
+                              360, // TODO: Verify RPM
                               2 // higher = faster, less accurate
 );
 
@@ -317,12 +361,81 @@ lemlib::Chassis chassis(drivetrain,
                         angular_controller, 
                         sensors);
 
-void menu_touch_callback() {
-    menu.touch_callback();
+void initialize() {
+    pros::screen::touch_callback([](){menu.touch_callback();}, TOUCH_PRESSED);
+    menu.add_option("Team color", pros::Color::red, {"Red", "Blue"});
+    menu.add_option("Auton direction", pros::Color::blue, {"Left", "Right"});
+    menu.add_option("Auton type", pros::Color::purple, {"Quals", "Elims", "Skills"});
+    menu.add_option("Ring/Goal rush", pros::Color::cyan, {"Ring", "Goal"});
+
+    // menu.on_enter(auton.set_config);
+    
+    menu.draw();
+    std::puts("\033[2J");
+
+
+    chassis.calibrate();
+    // menu.force_submit();
 }
 
-void initialize() {
-    pros::screen::touch_callback(menu_touch_callback, TOUCH_PRESSED);
+void opcontrol() {
+    chassis.setBrakeMode(MOTOR_BRAKE_HOLD);
+
+    pros::Task {[](){
+        while (true) {
+            pros::delay(1000);
+
+            pros::screen::set_eraser(pros::Color::black);
+            pros::screen::erase();
+
+            pros::screen::print(TEXT_MEDIUM, 1, "Intake temp: %f", lift_intake.temperature());
+            pros::screen::print(TEXT_MEDIUM, 2, "Wall stake temp: %f", wall_stake.temperature());
+            pros::screen::print(TEXT_MEDIUM, 3, "Drivetrain temp: %f", 
+                (drivetrain.leftMotors->get_temperature(0) + drivetrain.rightMotors->get_temperature(0)) / 2.0);
+        }
+    }, "opcontrol: Log temps"};
+
+    while (true) {
+        pros::delay(20);
+
+        if (controller.get_digital(DIGITAL_L2))
+            lift_intake.spin(MotorDirection::FORWARD);
+
+        else if (controller.get_digital(DIGITAL_L1))
+            lift_intake.spin(MotorDirection::REVERSE);
+
+        else
+            lift_intake.stop();
+
+
+        if (controller.get_digital_new_press(DIGITAL_X))
+            wall_stake.pickup();
+
+        if (controller.get_digital_new_press(DIGITAL_B))
+            wall_stake.reset();
+
+        
+        if (controller.get_digital(DIGITAL_Y))
+            wall_stake.spin(MotorDirection::REVERSE);
+        
+        else if (controller.get_digital(DIGITAL_A))
+            wall_stake.spin(MotorDirection::FORWARD);
+
+        else
+            wall_stake.stop();
+
+        
+        if (controller.get_digital_new_press(DIGITAL_R2))
+            stake_grabber.toggle();
+        
+        if (controller.get_digital_new_press(DIGITAL_R1))
+            doink_piston.toggle();
+
+        auto left_y = controller.get_analog(ANALOG_LEFT_Y);
+        auto right_x = controller.get_analog(ANALOG_RIGHT_X);
+
+        chassis.curvature(left_y, right_x);
+    }
 }
 
 /*
@@ -380,112 +493,4 @@ class Auton:
 
         elif config['Auton type'] == "Elims":
             self._routine_selected = self._elims
-
-    def __call__(self):
-        wall_stake.start_log()
-        self._routine_selected()
-
-#region Parts
-BLUE_SIG = Signature(1, -4645, -3641, -4143,4431, 9695, 7063, 2.5, 0)
-RED_SIG = Signature(2, 7935, 9719, 8827,-1261, -289, -775, 2.5, 0)
-
-brain = Brain()
-controller = Controller()
-
-stake_grabber = DigitalOutToggleable(brain.three_wire_port.a)
-doink_piston = DigitalOutToggleable(brain.three_wire_port.b)
-
-drivetrain= SmartDrive(
-                MotorGroup(
-                    Motor(Ports.PORT1, GearSetting.RATIO_6_1, False), 
-                    Motor(Ports.PORT2, GearSetting.RATIO_6_1, True),
-                    Motor(Ports.PORT3, GearSetting.RATIO_6_1, False),
-                ),
-
-                MotorGroup(
-                    Motor(Ports.PORT4, GearSetting.RATIO_6_1, True), 
-                    Motor(Ports.PORT5, GearSetting.RATIO_6_1, False), 
-                    Motor(Ports.PORT6, GearSetting.RATIO_6_1, True),
-                ),
-
-                Inertial(Ports.PORT10), 
-
-                259.34, # wheel travel
-                310,    # track width
-                205,    # wheel base
-                MM,     # unit
-                600/360
-            )
-
-#endregion Parts
-
-def initialize():
-    menu = SelectionMenu()
-
-    menu.add_option("Team color", Color.RED, ["Red", "Blue"])
-    menu.add_option("Auton direction", Color.BLUE, ["Left", "Right"])
-    menu.add_option("Auton type", Color.PURPLE, ["Quals", "Elims", "Skills"])
-    menu.add_option("Ring/Goal rush", Color.CYAN, ["Ring", "Goal"])
-
-    menu.on_enter(auton.set_config)
-    
-    menu.draw()
-    print("\033[2J")
-    controller.buttonLeft.pressed(menu.force_submit)
-
-def driver():
-    wall_stake.start_log()
-
-    drivetrain.set_drive_velocity(0, PERCENT)
-    drivetrain.set_turn_velocity(0, PERCENT)
-    
-    lift_intake.stop()
-    drivetrain.drive(FORWARD)
-
-    drivetrain.set_stopping(COAST)
-
-    controller.buttonL2.pressed(lift_intake.spin, (FORWARD,))
-    controller.buttonL2.released(lift_intake.stop)
-    controller.buttonL1.pressed(lift_intake.spin, (REVERSE,))
-    controller.buttonL1.released(lift_intake.stop)
-
-    controller.buttonX.pressed(wall_stake.pickup)
-    controller.buttonB.pressed(wall_stake.reset)
-
-    controller.buttonY.pressed(wall_stake.spin, (REVERSE,))
-    controller.buttonY.released(wall_stake.stop)
-
-    controller.buttonA.pressed(wall_stake.spin, (FORWARD,))
-    controller.buttonA.released(wall_stake.stop)
-
-    controller.buttonR2.pressed(stake_grabber.toggle)
-    controller.buttonR1.pressed(doink_piston.toggle)
-    
-    while True:
-        accel_stick = controller.axis3.position()
-        turn_stick = controller.axis1.position()
-
-        drivetrain.lm.set_velocity(accel_stick - turn_stick, PERCENT)
-        drivetrain.rm.set_velocity(accel_stick + turn_stick, PERCENT)
-
-        wait(1 / 60, SECONDS)
-
-auton = Auton()
-
-Competition(driver, auton)
-initialize()
-
-    def print_pos(self):
-        while True:
-            wait(200, MSEC)
-            brain.screen.clear_screen()
-            brain.screen.set_cursor(1, 1)
-            brain.screen.print("Intake temp:", lift_intake.motor.temperature())
-            brain.screen.set_cursor(2, 1)
-            brain.screen.print("Wall stake temp:", wall_stake.motor.temperature())
-            brain.screen.set_cursor(3, 1)
-            brain.screen.print("Drivetrain temp:", drivetrain.temperature())
-
-    def start_log(self):
-        Thread(self.print_pos)
 */
