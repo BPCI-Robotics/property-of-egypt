@@ -8,12 +8,26 @@ enum class MotorDirection {
 
 enum class AutonDirection {
     LEFT,
-    RIGHT
+    RIGHT,
+    UNSET
 };
 
 enum class TeamColor {
     RED,
     BLUE,
+    UNSET
+};
+
+enum class AutonMode {
+    QUALS,
+    ELIMS,
+    SKILLS,
+    UNSET
+};
+
+enum class RushType {
+    RING,
+    GOAL,
     UNSET
 };
 
@@ -302,6 +316,46 @@ public:
     auto temperature() const { return motor.get_temperature(); }
 };
 
+class Auton {
+private:
+    AutonDirection direction = AutonDirection::LEFT;
+    TeamColor my_color = TeamColor::UNSET;
+    TeamColor enemy_color = TeamColor::UNSET;
+    AutonMode mode = AutonMode::UNSET;
+    RushType rush = RushType::UNSET;
+
+public:
+    Auton() {}
+
+    void set_config(std::unordered_map<std::string, std::string>& config) {
+
+        if (config["Team color"] == "Red") {
+            my_color = TeamColor::RED;
+            enemy_color = TeamColor::BLUE;
+        } else {
+            my_color = TeamColor::BLUE;
+            enemy_color = TeamColor::RED;
+        }
+
+        if (config["Auton direction"] == "Left")
+            direction = AutonDirection::LEFT;
+        else
+            direction = AutonDirection::RIGHT;
+
+        if (config["Ring/Goal rush"] == "Ring")
+            rush = RushType::RING;
+        else
+            rush = RushType::GOAL;
+
+        if (config["Auton type"] == "Skills")
+            mode = AutonMode::SKILLS;
+        else if (config["Auton type"] == "Quals")
+            mode = AutonMode::QUALS;
+        else
+            mode = AutonMode::ELIMS;
+    }
+};
+
 using namespace pros;
 using namespace pros::v5;
 
@@ -466,31 +520,4 @@ class Auton:
             elif self.mode == "Goal":
             
     def _skills(self):
-
-    def set_config(self, config: dict[str, Any]):
-
-        if config["Team color"] == "Red":
-            self.color = RED_SIG
-        else:
-            self.color = BLUE_SIG
-        
-        if config["Auton direction"] == "Left":
-            self.direction = LEFT
-        else:
-            self.direction = RIGHT
-
-        if config["Ring/Goal rush"] == "Ring":
-            self.mode = "Ring"
-        
-        else:
-            self.mode = "Goal"
-        
-        if config["Auton type"] == "Skills":
-            self._routine_selected = self._skills
-
-        elif config['Auton type'] == "Quals":
-            self._routine_selected = self._quals
-
-        elif config['Auton type'] == "Elims":
-            self._routine_selected = self._elims
 */
