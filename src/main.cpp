@@ -327,6 +327,34 @@ private:
 public:
     Auton() {}
 
+    /*
+    class Auton:
+        def __init__(self):
+            self.direction = LEFT
+            self._routine_selected = self._noop
+            self.color = RED_SIG
+            self.mode = "Ring"
+
+        def _noop(self):
+            pass
+
+        def _quals(self):
+            if self.color == RED_SIG:
+            elif self.color == BLUE_SIG:
+
+        def _elims(self):
+            drivetrain.set_timeout(5, SECONDS)
+            if self.color == RED_SIG:
+                if self.mode == "Ring":
+                elif self.mode == "Goal":
+
+            elif self.color == BLUE_SIG:
+                if self.mode == "Ring":
+
+                elif self.mode == "Goal":
+                
+        def _skills(self):
+    */
     void set_config(std::unordered_map<std::string, std::string>& config) {
 
         if (config["Team color"] == "Red") {
@@ -491,33 +519,3 @@ void opcontrol() {
         chassis.curvature(left_y, right_x);
     }
 }
-
-/*
-
-class Auton:
-    def __init__(self):
-        self.direction = LEFT
-        self._routine_selected = self._noop
-        self.color = RED_SIG
-        self.mode = "Ring"
-
-    def _noop(self):
-        pass
-
-    def _quals(self):
-        if self.color == RED_SIG:
-        elif self.color == BLUE_SIG:
-
-    def _elims(self):
-        drivetrain.set_timeout(5, SECONDS)
-        if self.color == RED_SIG:
-            if self.mode == "Ring":
-            elif self.mode == "Goal":
-
-        elif self.color == BLUE_SIG:
-            if self.mode == "Ring":
-
-            elif self.mode == "Goal":
-            
-    def _skills(self):
-*/
