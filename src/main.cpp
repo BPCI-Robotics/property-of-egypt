@@ -111,12 +111,6 @@ public:
         enter_callback = callback;
     }
 
-    void force_submit() {
-        enter_callback(get_all());
-        disabled = true;
-        return;
-    }
-
     void add_option(std::string name, pros::Color color, std::vector<std::string> choices) {
         if (disabled)
             return;
@@ -393,6 +387,7 @@ WallStake wall_stake (Motor (-8, MotorGears::red, MotorEncoderUnits::degrees),
 Controller controller(CONTROLLER_MASTER);
 
 SelectionMenu menu {};
+Auton auton {};
 
 adi::Pneumatics stake_grabber ('a', false);
 adi::Pneumatics doink_piston ('b', false);
@@ -450,14 +445,13 @@ void initialize() {
     menu.add_option("Auton type", pros::Color::purple, {"Quals", "Elims", "Skills"});
     menu.add_option("Ring/Goal rush", pros::Color::cyan, {"Ring", "Goal"});
 
-    // menu.on_enter(auton.set_config);
+    menu.on_enter([](auto config){auton.set_config(config);});
     
     menu.draw();
     std::puts("\033[2J");
 
 
     chassis.calibrate();
-    // menu.force_submit();
 }
 
 void opcontrol() {
