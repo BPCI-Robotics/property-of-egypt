@@ -312,7 +312,7 @@ public:
 
 class Auton {
 private:
-    AutonDirection direction = AutonDirection::LEFT;
+    AutonDirection direction = AutonDirection::UNSET;
     TeamColor my_color = TeamColor::UNSET;
     TeamColor enemy_color = TeamColor::UNSET;
     AutonMode mode = AutonMode::UNSET;
@@ -433,10 +433,23 @@ lemlib::ControllerSettings angular_controller(  2, // proportional gain (kP)
 v5::Imu imu(10);
 lemlib::OdomSensors sensors(nullptr, nullptr, nullptr, nullptr, &imu);
 
+lemlib::ExpoDriveCurve throttle_curve(3, // joystick deadband out of 127
+                                     10, // minimum output where drivetrain will move out of 127
+                                     1.019 // expo curve gain
+);
+
+lemlib::ExpoDriveCurve steer_curve(3, // joystick deadband out of 127
+                                  10, // minimum output where drivetrain will move out of 127
+                                  1.019 // expo curve gain
+);
+
 lemlib::Chassis chassis(drivetrain, 
                         lateral_controller, 
                         angular_controller, 
-                        sensors);
+                        sensors,
+                        &throttle_curve,
+                        &steer_curve
+);
 
 void initialize() {
     pros::screen::touch_callback([](){menu.touch_callback();}, TOUCH_PRESSED);
@@ -450,8 +463,9 @@ void initialize() {
     menu.draw();
     std::puts("\033[2J");
 
-
+    imu.calibrate();
     chassis.calibrate();
+    pros::delay(3200);
 }
 
 void opcontrol() {
